@@ -116,5 +116,5 @@ if __name__ == "__main__":
     start_positions = {"Brant": -1, "Pheobe": -2, "Jinhsi": -1, "Calcharo": 0}
     start_stacks = [["Jinhsi", "Brant"], ["Calcharo"], ["Pheobe"]]
 
-    results = simulate_many_games(10000, start_positions, start_stacks)
+    results = simulate_many_games(5000, start_positions, start_stacks)
     print(results)
