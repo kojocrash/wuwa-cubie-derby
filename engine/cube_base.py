@@ -24,6 +24,10 @@ class CubeBase(TagMixin):
 
     CUBE_TYPE: ClassVar[str] = ""
 
+    @property
+    def is_abbowser(self) -> bool:
+        return self.CUBE_TYPE == "Abbowser"
+
     def __init__(self, name: str | None = None) -> None:
         self.__init_tags__()
         self.name: str = name if name is not None else type(self).CUBE_TYPE

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import random
 from collections import defaultdict
 from typing import TYPE_CHECKING
@@ -26,18 +27,22 @@ class Game:
     game = Game()
     game.setup([(Chisa(), None), (Lynae(), None), ...])
     ranking = game.run_game()
+
+    Pass verbose=True to print a detailed turn-by-turn trace.
     """
 
-    def __init__(self) -> None:
-        # Import here to avoid a circular import at module load time
+    def __init__(self, verbose: bool = False) -> None:
         from cubes.abbowser import AbbowserCube
+        self.verbose = verbose
+        ab = AbbowserCube()
+        ab.laps_needed = math.inf
+        self._abbowser = ab
         self.cubes: list[CubeBase] = []
         self.pads: dict[int, CubeBase] = {}  # pad → bottom cube of stack (absent if empty)
         self.round_number: int = 0
         self.round_rolls: dict[str, int] = {}
         self.race_finished: bool = False
         self._first_half: bool = False
-        self._abbowser: AbbowserCube = AbbowserCube()
 
     # ------------------------------------------------------------------
     # Linked-list stack helpers (private)
@@ -140,29 +145,42 @@ class Game:
         """
         Place cubes for a race.
 
-        participants: [(cube, pad), ...] where pad=None means first-half (all start at pad 1).
-        If ALL pads are None → first-half mode: initial stack order is deferred until the
-        round-1 turn order is known so each cube's first move is independent.
-        If ANY pad is an int → second-half mode: cubes are placed at their specified pads.
-        Abbowser is not included in participants; Game manages it internally.
+        participants: [(cube, pad), ...] where pad=None means pad 0 in second-half.
+        If ALL pads are None → first-half mode: all regular cubes start at pad 1,
+          and the initial stack order is deferred until the round-1 turn order is known.
+        If ANY pad is supplied → second-half mode: pad=None defaults to pad 0.
+
+        Abbowser is not included in participants; Game places him at pad 0 below
+        any other cubes that start there.
         """
-        self.cubes = [cube for cube, _ in participants]
+        # Reset AB and plant him at pad 0 (bottom of any eventual stack there)
+        ab = self._abbowser
+        ab.position = 0
+        ab.laps_needed = math.inf
+        ab.above = None
+        ab.below = None
+        self.pads = {0: ab}
+        self.cubes = [ab]
+
+        regular = [cube for cube, _ in participants]
+        self.cubes.extend(regular)
+
         is_second_half = any(pad is not None for _, pad in participants)
 
         if not is_second_half:
-            for cube in self.cubes:
+            # First-half: all regular cubes at pad 1, stack order set after turn order
+            for cube in regular:
                 cube.position = 1
                 cube.laps_needed = 1
+                self._append_to_top(cube, 1)
             self._first_half = True
         else:
-            by_pad: dict[int, list[CubeBase]] = defaultdict(list)
+            # Second-half: place cubes at their specified pads; None → pad 0
             for cube, pad in participants:
-                actual = (pad % TRACK_SIZE) if pad is not None else 1
+                actual = (pad % TRACK_SIZE) if pad is not None else 0
                 cube.position = actual
                 cube.laps_needed = 1
-                by_pad[actual].append(cube)
-            for pad, group in by_pad.items():
-                self._set_stack(pad, group)  # insertion order = bottom → top
+                self._append_to_top(cube, actual)
             self._first_half = False
 
     # ------------------------------------------------------------------
@@ -170,11 +188,11 @@ class Game:
     # ------------------------------------------------------------------
 
     def active_non_ab_cubes(self) -> list[CubeBase]:
-        return [c for c in self.cubes if c.CUBE_TYPE != "Abbowser"]
+        return [c for c in self.cubes if not c.is_abbowser]
 
     def get_adjusted_distance(self, cube: CubeBase) -> int:
         """Pads remaining until cube wins. Lower = closer to winning. AB returns a sentinel."""
-        if cube.CUBE_TYPE == "Abbowser":
+        if cube.is_abbowser:
             return 10_000
         if cube.laps_needed == 0:
             return 0
@@ -207,17 +225,16 @@ class Game:
 
     def run_game(self) -> list[CubeBase]:
         """Run until someone finishes. Returns ranking best → worst (no AB)."""
-        ab = self._abbowser
+        if self.verbose:
+            self._vprint_board("INITIAL BOARD")
 
         while not self.race_finished:
             self.round_number += 1
 
-            # Introduce AB at round 3
-            if self.round_number == 3 and ab not in self.cubes:
-                ab.position = 0
-                ab.laps_needed = 1
-                self.cubes.append(ab)
-                self._append_to_top(ab, 0)
+            if self.verbose:
+                print(f"\n{'═' * 52}")
+                print(f"  ROUND {self.round_number}")
+                print(f"{'═' * 52}")
 
             # --- Turn order phase ---
             turn_order = list(self.cubes)
@@ -226,7 +243,10 @@ class Game:
             self._run_step(Step.TURN_ORDER, ctx)
             turn_order = ctx.turn_order
 
-            # For first-half round 1: build the initial stack from turn order
+            if self.verbose:
+                print(f"Turn order: {' → '.join(c.name for c in turn_order)}")
+
+            # For first-half round 1: rebuild pad-1 stack from turn order
             # (first mover on top so each cube's first move is independent)
             if self._first_half and self.round_number == 1:
                 self._set_stack(1, list(reversed(turn_order)))
@@ -234,6 +254,12 @@ class Game:
 
             # --- Roll phase: pre-roll all dice before any turns execute ---
             self.round_rolls = {cube.name: cube.base_roll() for cube in turn_order}
+
+            if self.verbose:
+                rolls_str = "  ".join(
+                    f"{n}={r}" for n, r in self.round_rolls.items()
+                )
+                print(f"Rolls:      {rolls_str}")
 
             # --- Turn phase ---
             for cube in turn_order:
@@ -248,6 +274,9 @@ class Game:
             ctx = RoundEndContext(game=self)
             self._run_step(Step.ROUND_END, ctx)
 
+            if self.verbose:
+                self._vprint_board(f"after round {self.round_number}")
+
         return self.get_ranking()
 
     # ------------------------------------------------------------------
@@ -255,17 +284,24 @@ class Game:
     # ------------------------------------------------------------------
 
     def _execute_turn(self, cube: CubeBase) -> None:
+        raw_roll = self.round_rolls[cube.name]
+
         # ROLL_POST: effects can modify the pre-rolled value
-        ctx = RollContext(game=self, active_cube=cube, roll=self.round_rolls[cube.name])
+        ctx = RollContext(game=self, active_cube=cube, roll=raw_roll)
         self._run_step(Step.ROLL_POST, ctx)
         total_pads = ctx.roll
 
-        # PRE_MOVE: effects can adjust how many pads will be moved
+        # PRE_MOVE: effects can adjust how many steps will be taken
         ctx = PreMoveContext(game=self, active_cube=cube, roll=total_pads, total_pads=total_pads)
         self._run_step(Step.PRE_MOVE, ctx)
         total_pads = ctx.total_pads
 
-        direction = -1 if cube.CUBE_TYPE == "Abbowser" else 1
+        if self.verbose:
+            roll_str = str(raw_roll) if total_pads == raw_roll else f"{raw_roll} → {total_pads}"
+            print(f"\n  [{cube.name}]  pad {cube.position}  roll={roll_str}  ({total_pads} steps)")
+
+        # stride: sign = direction (+forward / -backward), magnitude = pads covered per step
+        stride = -1 if cube.is_abbowser else 1
         pads_remaining = total_pads
         moved = False
 
@@ -274,30 +310,42 @@ class Game:
             # STEP_PRE
             ctx = StepPreContext(
                 game=self, active_cube=cube,
-                pads_remaining=pads_remaining, direction=direction,
+                pads_remaining=pads_remaining, stride=stride,
             )
             self._run_step(Step.STEP_PRE, ctx)
             pads_remaining = ctx.pads_remaining
-            direction = ctx.direction
+            stride = ctx.stride
             if ctx.cancelled:
+                if self.verbose:
+                    print(f"    (movement cancelled)")
                 break
 
-            next_pad = (cube.position + direction) % TRACK_SIZE
+            old_pos = cube.position
+            next_pad = (cube.position + stride) % TRACK_SIZE
             self.move_unit(cube, next_pad)
             moved = True
             pads_remaining -= 1
 
+            if self.verbose:
+                unit = cube.get_moving_unit()
+                carrying = (
+                    f"  [+ {', '.join(c.name for c in unit[1:])}]" if len(unit) > 1 else ""
+                )
+                print(f"    pad {old_pos} → pad {next_pad}{carrying}")
+
             # STEP_POST
             ctx = StepPostContext(
                 game=self, active_cube=cube,
-                pads_remaining=pads_remaining, direction=direction,
+                pads_remaining=pads_remaining, stride=stride,
             )
             self._run_step(Step.STEP_POST, ctx)
             pads_remaining = ctx.pads_remaining
 
-            # Finish check: only for forward crossing of pad 0
-            if direction == 1 and cube.position == 0:
-                if self._check_and_resolve_finish(cube, direction):
+            # Finish check: forward crossing of pad 0
+            if stride > 0 and cube.position == 0:
+                if self.verbose:
+                    print(f"    *** {cube.name} crosses the finish line!")
+                if self._check_and_resolve_finish(cube, stride):
                     break
 
             if self.race_finished:
@@ -306,6 +354,13 @@ class Game:
         # --- Pad effect (landing pad trigger) ---
         if moved and not self.race_finished:
             self._apply_pad_effect(cube)
+
+        if self.verbose:
+            unit = cube.get_moving_unit()
+            carrying = (
+                f"  [carrying: {', '.join(c.name for c in unit[1:])}]" if len(unit) > 1 else ""
+            )
+            print(f"    ends at pad {cube.position}{carrying}")
 
         # --- Turn-end effects ---
         ctx = TurnEndContext(game=self, active_cube=cube)
@@ -320,18 +375,29 @@ class Game:
 
         if pad_type == PadType.THRUSTER:
             new_pad = (cube.position + 1) % TRACK_SIZE
+            if self.verbose:
+                print(f"    [THRUSTER at pad {cube.position}] → pad {new_pad}")
             self.move_unit(cube, new_pad)
             if new_pad == 0:
-                self._check_and_resolve_finish(cube, direction=1)
+                if self.verbose:
+                    print(f"    *** {cube.name} crosses the finish line (thruster)!")
+                self._check_and_resolve_finish(cube, stride=1)
 
         elif pad_type == PadType.BLOCKER:
             new_pad = (cube.position - 1) % TRACK_SIZE
+            if self.verbose:
+                print(f"    [BLOCKER at pad {cube.position}] → pad {new_pad}")
             self.move_unit(cube, new_pad)
 
         elif pad_type == PadType.SPATIAL_RIFT:
+            if self.verbose:
+                print(f"    [SPATIAL RIFT at pad {cube.position}] shuffling stack")
             stack = self.get_stack(cube.position)
             random.shuffle(stack)
             self._set_stack(cube.position, stack)
+            if self.verbose:
+                new_order = ", ".join(c.name for c in self.get_stack(cube.position))
+                print(f"    new order (bottom→top): {new_order}")
 
         ctx = PadEffectContext(game=self, active_cube=cube)
         self._run_step(Step.PAD_EFFECT, ctx)
@@ -340,14 +406,14 @@ class Game:
     # Finish-line resolution
     # ------------------------------------------------------------------
 
-    def _check_and_resolve_finish(self, cube: CubeBase, direction: int) -> bool:
+    def _check_and_resolve_finish(self, cube: CubeBase, stride: int) -> bool:
         """
-        Called when direction==1 and cube is at pad 0.
+        Called when stride > 0 and cube landed on pad 0.
         Fires FINISH_CHECK effects (which may suppress the crossing).
-        If not suppressed, decrements laps_needed for the moving unit.
+        Decrements laps_needed for every non-AB cube in the moving unit.
         Returns True if the race is now finished.
         """
-        ctx = FinishCheckContext(game=self, active_cube=cube, direction=direction)
+        ctx = FinishCheckContext(game=self, active_cube=cube, stride=stride)
         self._run_step(Step.FINISH_CHECK, ctx)
 
         if ctx.finish_suppressed:
@@ -355,10 +421,10 @@ class Game:
 
         unit = cube.get_moving_unit()
         for c in unit:
-            if c.CUBE_TYPE != "Abbowser":
+            if not c.is_abbowser:
                 c.laps_needed -= 1
 
-        if any(c.laps_needed <= 0 for c in unit if c.CUBE_TYPE != "Abbowser"):
+        if any(c.laps_needed <= 0 for c in unit if not c.is_abbowser):
             self.race_finished = True
             return True
 
@@ -372,3 +438,17 @@ class Game:
         for eff in self.all_effects(step):
             if eff.matches(ctx):
                 eff.apply(ctx)
+
+    # ------------------------------------------------------------------
+    # Debug helpers
+    # ------------------------------------------------------------------
+
+    def _vprint_board(self, label: str) -> None:
+        print(f"\n  Board [{label}]:")
+        if not self.pads:
+            print("    (empty)")
+            return
+        for pad in sorted(self.pads.keys()):
+            stack = self.get_stack(pad)
+            names = ", ".join(c.name for c in stack)
+            print(f"    pad {pad:2d}: {names}  (bottom → top)")

@@ -38,7 +38,7 @@ class _MidpointTeleport(Effect):
 
         candidates = [
             c for c in game.cubes
-            if c.CUBE_TYPE != "Abbowser" and c is not aemeath
+            if not c.is_abbowser and c is not aemeath
         ]
         if not candidates:
             return

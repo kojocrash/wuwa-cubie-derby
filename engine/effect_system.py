@@ -51,19 +51,19 @@ class PreMoveContext(EffectContext):
 @dataclass
 class StepPreContext(EffectContext):
     pads_remaining: int = 0              # mutable
-    direction: int = 1                   # mutable
+    stride: int = 1                      # mutable: sign=direction, magnitude=pads per step
     cancelled: bool = False              # mutable
 
 
 @dataclass
 class StepPostContext(EffectContext):
     pads_remaining: int = 0              # mutable
-    direction: int = 1
+    stride: int = 1                      # sign=direction, magnitude=pads per step
 
 
 @dataclass
 class FinishCheckContext(EffectContext):
-    direction: int = 1
+    stride: int = 1                      # stride that triggered this crossing
     finish_suppressed: bool = False      # mutable
 
 

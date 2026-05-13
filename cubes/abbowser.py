@@ -4,7 +4,10 @@ import random
 from typing import ClassVar
 
 from engine.cube_base import CubeBase
-from engine.effect_system import Effect, Step, StepPostContext, RoundEndContext
+from engine.effect_system import (
+    Effect, Step,
+    TurnOrderContext, StepPostContext, RoundEndContext,
+)
 
 
 def _is_past_ab(cube: CubeBase, ab: CubeBase) -> bool:
@@ -19,6 +22,19 @@ def _is_past_ab(cube: CubeBase, ab: CubeBase) -> bool:
     if cube.position == 0:
         return True
     return cube.position > ab.position
+
+
+class _SitOut(Effect):
+    """AB doesn't take turns in rounds 1 and 2."""
+
+    def __init__(self, owner: CubeBase) -> None:
+        super().__init__(owner, Step.TURN_ORDER)
+
+    def matches(self, ctx: TurnOrderContext) -> bool:
+        return ctx.game.round_number < 3
+
+    def apply(self, ctx: TurnOrderContext) -> None:
+        ctx.turn_order = [c for c in ctx.turn_order if c is not self.owner]
 
 
 class _TeleportToBottom(Effect):
@@ -50,13 +66,13 @@ class _BackwardFinishCross(Effect):
     def matches(self, ctx: StepPostContext) -> bool:
         return (
             ctx.active_cube is self.owner
-            and ctx.direction == -1
+            and ctx.stride < 0
             and self.owner.position == 0
         )
 
     def apply(self, ctx: StepPostContext) -> None:
         for cube in ctx.game.get_stack(0):
-            if cube.CUBE_TYPE != "Abbowser":
+            if not cube.is_abbowser:
                 cube.laps_needed += 1
 
 
@@ -73,8 +89,6 @@ class _SeparationTeleport(Effect):
         ab = self.owner
         game = ctx.game
 
-        if ab not in game.cubes:
-            return False
         if ab.position == 0:
             return False
 
@@ -97,6 +111,7 @@ class AbbowserCube(CubeBase):
     The chaos wildcard.  Moves backward (from finish toward start), rolls 1–6,
     always sinks to the bottom of any stack it joins, and teleports back to the
     finish line whenever separated from all other cubes at round end.
+    Sits out rounds 1 and 2 entirely.
     """
 
     CUBE_TYPE: ClassVar[str] = "Abbowser"
@@ -105,6 +120,7 @@ class AbbowserCube(CubeBase):
         return random.randint(1, 6)
 
     def _setup_effects(self) -> None:
+        self._register(_SitOut(self))
         self._register(_TeleportToBottom(self))
         self._register(_BackwardFinishCross(self))
         self._register(_SeparationTeleport(self))
