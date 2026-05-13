@@ -13,9 +13,9 @@ _TAG = "iuno.gather"
 class _GatherAtMidpoint(Effect):
     """
     At TURN_END, the first time Iuno is at or past the midpoint with at least one
-    non-Abbowser cube ahead (higher pad number), all non-Abbowser cubes are
-    teleported to Iuno's pad.  The new stack is ordered by their pre-teleport
-    positions: furthest behind at the bottom, furthest ahead at the top.
+    non-Abbowser cube ahead, all non-Abbowser cubes are teleported to Iuno's pad
+    and restacked by ranking: last place at the bottom, first place at the top.
+    Abbowser (if present at that pad) stays below everyone.
 
     If no cube is ahead when Iuno crosses, the effect is held and retried each
     subsequent TURN_END until a valid target exists.  Triggers once per match.
@@ -43,20 +43,15 @@ class _GatherAtMidpoint(Effect):
         game = ctx.game
         target_pad = iuno.position
 
-        # Collect non-Abbowser cubes in bottom-to-top stack order, pad by pad
-        # (ascending pad = further behind = will end up lower in the new stack)
-        cubes_ordered: list[CubeBase] = []
-        for pad in sorted(set(c.position for c in game.cubes if not c.is_abbowser)):
-            for cube in game.get_stack(pad):
-                if not cube.is_abbowser:
-                    cubes_ordered.append(cube)
+        # Rank worst→best so the worst-ranked cube ends up at the bottom of the
+        # new stack and the best-ranked cube ends up at the top.
+        # Abbowser is excluded from get_ranking() and is left untouched; if he
+        # happens to be at target_pad he stays at the very bottom.
+        cubes_ordered = list(reversed(game.get_ranking()))
 
-        # Detach every non-Abbowser cube from its current position
         for cube in cubes_ordered:
             game._detach_single(cube)
 
-        # Rebuild the stack at target_pad in sorted order; Abbowser (if present)
-        # remains at the bottom since he was never touched
         for cube in cubes_ordered:
             game._append_to_top(cube, target_pad)
             cube.position = target_pad
@@ -66,10 +61,9 @@ class _GatherAtMidpoint(Effect):
 
 class Iuno(CubeBase):
     """
-    Once per match: when Iuno first reaches or passes the midpoint (TRACK_SIZE // 2)
-    with at least one cube ahead, all non-Abbowser cubes are pulled to her pad and
-    restacked by their pre-teleport positions (behind → bottom, ahead → top).
-    Held if no one is ahead; fires at TURN_END.
+    Once per match: when Iuno first reaches or passes the midpoint with at least
+    one cube ahead, all non-Abbowser cubes are pulled to her pad and restacked by
+    ranking (last place → bottom, first place → top).  Held if no one is ahead.
     """
 
     CUBE_TYPE: ClassVar[str] = "Iuno"
