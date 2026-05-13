@@ -18,10 +18,9 @@ def _circular_distance(a: int, b: int) -> int:
 class _MidpointTeleport(Effect):
     """
     At the end of the turn Aemeath first crosses the midpoint (TRACK_SIZE // 2),
-    she teleports on top of the closest non-Abbowser cube.  Triggers once per match.
-    Fires at TURN_END so the teleport happens after all movement and pad effects
-    for that turn have resolved.  "Crosses" means her final position is at or past
-    the midpoint, which handles strides greater than 1 skipping the exact pad.
+    she teleports on top of the closest non-Abbowser cube that is ahead of her.
+    If no cube is ahead the teleport is held over and retried each subsequent
+    TURN_END until one is available.  Triggers once per match.
     """
 
     def __init__(self, owner: CubeBase) -> None:
@@ -37,13 +36,16 @@ class _MidpointTeleport(Effect):
     def apply(self, ctx: TurnEndContext) -> None:
         aemeath = self.owner
         game = ctx.game
+        aemeath_dist = game.get_adjusted_distance(aemeath)
 
         candidates = [
             c for c in game.cubes
-            if not c.is_abbowser and c is not aemeath
+            if not c.is_abbowser
+            and c is not aemeath
+            and game.get_adjusted_distance(c) < aemeath_dist
         ]
         if not candidates:
-            return
+            return  # no one ahead — hold the teleport for a later turn
 
         candidates.sort(
             key=lambda c: (
@@ -51,16 +53,15 @@ class _MidpointTeleport(Effect):
                 game.get_adjusted_distance(c),
             )
         )
-        target = candidates[0]
-
         aemeath.add_tag(_TAG, timestamp=game.round_number)
-        aemeath.attach_above(target, game)
+        aemeath.attach_above(candidates[0], game)
 
 
 class Aemeath(CubeBase):
     """
-    Teleports on top of the closest non-Abbowser cube the first time she crosses
-    the midpoint (TRACK_SIZE // 2).  Triggers once per match at TURN_END.
+    Teleports on top of the closest non-Abbowser cube ahead of her the first time
+    she crosses the midpoint (TRACK_SIZE // 2).  If no cube is ahead, the teleport
+    is held until one is.  Triggers once per match at TURN_END.
     """
 
     CUBE_TYPE: ClassVar[str] = "Aemeath"
