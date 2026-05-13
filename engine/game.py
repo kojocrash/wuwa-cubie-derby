@@ -374,10 +374,30 @@ class Game:
     def _apply_pad_effect(self, cube: CubeBase) -> None:
         pad_type = get_pad_type(cube.position)
 
+        if pad_type == PadType.NORMAL:
+            return
+
+        # Build context with the proposed outcome; fire PAD_EFFECT so effects
+        # can modify push distance, stack order, etc. before anything executes.
+        if pad_type == PadType.SPATIAL_RIFT:
+            proposed = self.get_stack(cube.position)
+            random.shuffle(proposed)
+            ctx = PadEffectContext(
+                game=self, active_cube=cube, pad_type=pad_type, new_order=proposed,
+            )
+        else:
+            ctx = PadEffectContext(
+                game=self, active_cube=cube, pad_type=pad_type, push_pads=1,
+            )
+
+        self._run_step(Step.PAD_EFFECT, ctx)
+
+        # Execute using the (possibly modified) context values
         if pad_type == PadType.THRUSTER:
-            new_pad = (cube.position + 1) % TRACK_SIZE
+            old_pad = cube.position
+            new_pad = (cube.position + ctx.push_pads) % TRACK_SIZE
             if self.verbose:
-                print(f"    [THRUSTER at pad {cube.position}] → pad {new_pad}")
+                print(f"    [THRUSTER at pad {old_pad}] → pad {new_pad}")
             self.move_unit(cube, new_pad)
             if new_pad == 0:
                 if self.verbose:
@@ -385,23 +405,19 @@ class Game:
                 self._check_and_resolve_finish(cube, stride=1)
 
         elif pad_type == PadType.BLOCKER:
-            new_pad = (cube.position - 1) % TRACK_SIZE
+            old_pad = cube.position
+            new_pad = (cube.position - ctx.push_pads) % TRACK_SIZE
             if self.verbose:
-                print(f"    [BLOCKER at pad {cube.position}] → pad {new_pad}")
+                print(f"    [BLOCKER at pad {old_pad}] → pad {new_pad}")
             self.move_unit(cube, new_pad)
 
         elif pad_type == PadType.SPATIAL_RIFT:
             if self.verbose:
                 print(f"    [SPATIAL RIFT at pad {cube.position}] shuffling stack")
-            stack = self.get_stack(cube.position)
-            random.shuffle(stack)
-            self._set_stack(cube.position, stack)
+            self._set_stack(cube.position, ctx.new_order)
             if self.verbose:
-                new_order = ", ".join(c.name for c in self.get_stack(cube.position))
-                print(f"    new order (bottom→top): {new_order}")
-
-        ctx = PadEffectContext(game=self, active_cube=cube)
-        self._run_step(Step.PAD_EFFECT, ctx)
+                order_str = ", ".join(c.name for c in self.get_stack(cube.position))
+                print(f"    new order (bottom→top): {order_str}")
 
     # ------------------------------------------------------------------
     # Finish-line resolution

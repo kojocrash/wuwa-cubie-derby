@@ -6,8 +6,9 @@ from typing import ClassVar
 from engine.cube_base import CubeBase
 from engine.effect_system import (
     Effect, Step,
-    TurnOrderContext, StepPostContext, RoundEndContext,
+    TurnOrderContext, StepPostContext, RoundEndContext, PadEffectContext,
 )
+from engine.track import PadType
 
 
 def _is_past_ab(cube: CubeBase, ab: CubeBase) -> bool:
@@ -22,6 +23,20 @@ def _is_past_ab(cube: CubeBase, ab: CubeBase) -> bool:
     if cube.position == 0:
         return True
     return cube.position > ab.position
+
+
+class _SpatialRiftSink(Effect):
+    """In any spatial rift AB lands in, force him to the bottom of the proposed order."""
+
+    def __init__(self, owner: CubeBase) -> None:
+        super().__init__(owner, Step.PAD_EFFECT, priority=10)
+
+    def matches(self, ctx: PadEffectContext) -> bool:
+        return ctx.pad_type == PadType.SPATIAL_RIFT and self.owner in ctx.new_order
+
+    def apply(self, ctx: PadEffectContext) -> None:
+        ctx.new_order.remove(self.owner)
+        ctx.new_order.insert(0, self.owner)
 
 
 class _SitOut(Effect):
@@ -120,6 +135,7 @@ class AbbowserCube(CubeBase):
         return random.randint(1, 6)
 
     def _setup_effects(self) -> None:
+        self._register(_SpatialRiftSink(self))
         self._register(_SitOut(self))
         self._register(_TeleportToBottom(self))
         self._register(_BackwardFinishCross(self))

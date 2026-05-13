@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING
 
+from .track import PadType  # needed as a default value in PadEffectContext
+
 if TYPE_CHECKING:
     from .game import Game
     from .cube_base import CubeBase
@@ -16,7 +18,7 @@ class Step(Enum):
     STEP_PRE     = "step_pre"      # before each individual pad step
     STEP_POST    = "step_post"     # after each individual pad step (stacking/AB pickup)
     FINISH_CHECK = "finish_check"  # on forward crossing of pad 0; effects can suppress
-    PAD_EFFECT   = "pad_effect"    # window after landing-pad trigger resolves
+    PAD_EFFECT   = "pad_effect"    # before landing-pad executes; effects can modify outcome
     TURN_END     = "turn_end"      # after full turn including pad effects
     ROUND_END    = "round_end"     # after all cubes in a round have moved
 
@@ -69,7 +71,11 @@ class FinishCheckContext(EffectContext):
 
 @dataclass
 class PadEffectContext(EffectContext):
-    pass
+    pad_type: PadType = PadType.NORMAL
+    # THRUSTER / BLOCKER: how many pads to push (mutable; default 1)
+    push_pads: int = 1
+    # SPATIAL_RIFT: proposed stack order bottom→top after shuffle (mutable)
+    new_order: list[CubeBase] = field(default_factory=list)
 
 
 @dataclass
