@@ -292,11 +292,13 @@ class Game:
         is_pad_push: bool = False,
     ) -> tuple[int, bool]:
         """
-        Move cube one pad, fire MOVE_POST, check the finish line.
+        Consume one move, advance cube one pad, fire MOVE_POST, check the finish line.
 
-        pads_remaining: moves still to go after this one; passed into MOVE_POST so
-        effects can modify it.  Returns (updated_pads_remaining, should_stop).
+        pads_remaining: moves still to go including this one; decremented internally
+        before MOVE_POST so effects see the remaining count after this move.
+        Returns (updated_pads_remaining, should_stop).
         """
+        pads_remaining -= 1
         old_pos = cube.position
         next_pad = (cube.position + stride) % TRACK_SIZE
         self.move_unit(cube, next_pad)
@@ -331,18 +333,18 @@ class Game:
         self,
         cube: CubeBase,
         stride: int,
-        total_pads: int,
+        move_count: int,
         is_pad_push: bool = False,
     ) -> bool:
         """
-        Move cube one pad at a time for up to total_pads pads.
+        Move cube one pad at a time for up to move_count moves.
 
-        For regular movement (not is_pad_push) fires MOVE_PRE before each pad,
+        For regular movement (not is_pad_push) fires MOVE_PRE before each move,
         which can cancel, adjust the remaining count, or change the stride.
         MOVE_POST effects that modify pads_remaining mid-push are respected.
-        Returns True if at least one pad was covered.
+        Returns True if at least one move was made.
         """
-        pads_remaining = total_pads
+        pads_remaining = move_count
         moved = False
         while pads_remaining > 0:
             if not is_pad_push:
@@ -357,7 +359,6 @@ class Game:
                     if self.verbose:
                         print(f"    (movement cancelled)")
                     return moved
-            pads_remaining -= 1
             moved = True
             pads_remaining, stop = self._move_one_pad(cube, stride, pads_remaining, is_pad_push)
             if stop:
@@ -370,19 +371,19 @@ class Game:
         # ROLL_POST: effects can modify the pre-rolled value
         ctx = RollContext(game=self, active_cube=cube, roll=raw_roll)
         self._run_step(Step.ROLL_POST, ctx)
-        total_pads = ctx.roll
+        move_count = ctx.roll
 
-        # PRE_MOVE: effects can adjust how many steps will be taken
-        ctx = PreMoveContext(game=self, active_cube=cube, roll=total_pads, total_pads=total_pads)
+        # PRE_MOVE: effects can adjust how many moves will be made
+        ctx = PreMoveContext(game=self, active_cube=cube, roll=move_count, move_count=move_count)
         self._run_step(Step.PRE_MOVE, ctx)
-        total_pads = ctx.total_pads
+        move_count = ctx.move_count
 
         if self.verbose:
-            roll_str = str(raw_roll) if total_pads == raw_roll else f"{raw_roll} → {total_pads}"
-            print(f"\n  [{cube.name}]  pad {cube.position}  roll={roll_str}  ({total_pads} steps)")
+            roll_str = str(raw_roll) if move_count == raw_roll else f"{raw_roll} → {move_count}"
+            print(f"\n  [{cube.name}]  pad {cube.position}  roll={roll_str}  ({move_count} moves)")
 
         stride = -1 if cube.is_abbowser else 1
-        moved = self._run_movement(cube, stride, total_pads)
+        moved = self._run_movement(cube, stride, move_count)
 
         # --- Pad effect (landing pad trigger) ---
         if moved and not self.race_finished:

@@ -47,7 +47,7 @@ class RollContext(EffectContext):
 @dataclass
 class PreMoveContext(EffectContext):
     roll: int = 0
-    total_pads: int = 0                   # mutable
+    move_count: int = 0                   # mutable
 
 
 @dataclass
