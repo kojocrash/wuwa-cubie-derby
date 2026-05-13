@@ -8,7 +8,19 @@ Pass -n <count> to change iteration count:
     python simulation.py -n 50000
 
 To simulate with custom starting positions (second-half style), call
-simulate() directly from another script and pass positions/stacks.
+simulate() directly from another script:
+
+    from simulation import simulate, print_results
+    from cubes.chisa import Chisa
+    from cubes.lynae import Lynae
+
+    # First-half (all start at pad 1)
+    r = simulate([Chisa, Lynae, ...])
+
+    # Second-half (specific pad positions)
+    r = simulate([(Chisa, 5), (Lynae, 10), ...])
+
+    print_results(r)
 """
 
 from __future__ import annotations
@@ -17,61 +29,25 @@ import argparse
 import sys
 from collections import defaultdict
 
-from cubes.abbowser import AbbowserCube
 from cubes.aemeath import Aemeath
 from cubes.carlotta import Carlotta
 from cubes.chisa import Chisa
 from cubes.lynae import Lynae
 from cubes.mornye import Mornye
 from cubes.shorekeeper import Shorekeeper
-from engine.game_engine import GameEngine
-
-
-# ---------------------------------------------------------------------------
-# Cube factory
-# ---------------------------------------------------------------------------
-
-_CUBE_CLASSES = {
-    "Chisa": Chisa,
-    "Mornye": Mornye,
-    "Lynae": Lynae,
-    "Aemeath": Aemeath,
-    "Shorekeeper": Shorekeeper,
-    "Carlotta": Carlotta,
-}
-
-_REGULAR_NAMES = list(_CUBE_CLASSES)
-
-
-def _make_cubes() -> tuple[list, AbbowserCube]:
-    """Instantiate one fresh set of cubes for a single simulation run."""
-    regular = [cls(name) for name, cls in _CUBE_CLASSES.items()]
-    ab = AbbowserCube("Abbowser")
-    return regular, ab
+from engine.game import Game
 
 
 # ---------------------------------------------------------------------------
 # Single-run helper
 # ---------------------------------------------------------------------------
 
-def _run_once(
-    positions: dict[str, int] | None = None,
-    stacks: list[list[str]] | None = None,
-) -> list[str]:
-    """
-    Run one race and return the ranking as a list of cube names (best → worst).
-    If *positions* is None, a first-half race is used (all start at pad 1).
-    """
-    regular, ab = _make_cubes()
-    engine = GameEngine()
-
-    if positions is None:
-        engine.setup_first_half(regular, abbowser=ab)
-    else:
-        engine.setup_custom(regular, positions, stacks=stacks, abbowser=ab)
-
-    ranking = engine.run_game()
-    return [c.name for c in ranking]
+def _do_race(parsed: list[tuple[type, int | None]]) -> list[str]:
+    """Run one race and return the ranking as a list of cube names (best → worst)."""
+    participants = [(cls(), pad) for cls, pad in parsed]
+    game = Game()
+    game.setup(participants)
+    return [c.name for c in game.run_game()]
 
 
 # ---------------------------------------------------------------------------
@@ -79,29 +55,36 @@ def _run_once(
 # ---------------------------------------------------------------------------
 
 def simulate(
+    participants: list,
     n: int = 10_000,
-    positions: dict[str, int] | None = None,
-    stacks: list[list[str]] | None = None,
 ) -> dict:
     """
     Run *n* races and aggregate results.
+
+    *participants* is a list of cube classes or (cube class, pad) tuples:
+      [Chisa, Mornye, ...]                           — first-half (all start at pad 1)
+      [(Chisa, 5), (Mornye, 10), ...]                — second-half (specific pads)
+      [(Chisa, 5), Mornye, ...]                      — mixed: None pad → pad 1
 
     Returns a dict with keys:
       'win_pct'    — {name: win_percentage}
       'avg_rank'   — {name: average_finish_rank}
       'n'          — number of simulations run
     """
+    parsed = [(p, None) if not isinstance(p, tuple) else p for p in participants]
+    names = [cls.CUBE_TYPE for cls, _ in parsed]
+
     win_counts: dict[str, int] = defaultdict(int)
     rank_totals: dict[str, int] = defaultdict(int)
 
     for _ in range(n):
-        ranking = _run_once(positions, stacks)
+        ranking = _do_race(parsed)
         win_counts[ranking[0]] += 1
         for rank_idx, name in enumerate(ranking, start=1):
             rank_totals[name] += rank_idx
 
-    win_pct = {name: win_counts[name] / n * 100 for name in _REGULAR_NAMES}
-    avg_rank = {name: rank_totals[name] / n for name in _REGULAR_NAMES}
+    win_pct = {name: win_counts[name] / n * 100 for name in names}
+    avg_rank = {name: rank_totals[name] / n for name in names}
 
     return {"win_pct": win_pct, "avg_rank": avg_rank, "n": n}
 
@@ -115,8 +98,7 @@ def print_results(results: dict) -> None:
     win_pct = results["win_pct"]
     avg_rank = results["avg_rank"]
 
-    # Sort by win percentage descending
-    names_sorted = sorted(_REGULAR_NAMES, key=lambda name: -win_pct[name])
+    names_sorted = sorted(win_pct.keys(), key=lambda name: -win_pct[name])
 
     title = f"Cubie Derby Race Simulation  ({n:,} runs)"
     sep = "─" * 44
@@ -143,7 +125,10 @@ def main() -> None:
     args = parser.parse_args()
 
     print(f"Running {args.runs:,} simulations…", file=sys.stderr)
-    results = simulate(n=args.runs)
+    results = simulate(
+        [Chisa, Mornye, Lynae, Aemeath, Shorekeeper, Carlotta],
+        n=args.runs,
+    )
     print_results(results)
 
 

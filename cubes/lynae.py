@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import random
+from typing import ClassVar
 
 from engine.cube_base import CubeBase
-from engine.effect_system import Effect, EffectContext, Step
+from engine.effect_system import Effect, Step, RollContext
 
 
 class _LynaeRollModifier(Effect):
@@ -17,10 +18,10 @@ class _LynaeRollModifier(Effect):
     def __init__(self, owner: CubeBase) -> None:
         super().__init__(owner, Step.ROLL_POST)
 
-    def condition(self, ctx: EffectContext) -> bool:
+    def matches(self, ctx: RollContext) -> bool:
         return ctx.active_cube is self.owner
 
-    def apply(self, ctx: EffectContext) -> None:
+    def apply(self, ctx: RollContext) -> None:
         r = random.random()
         if r < 0.20:
             ctx.roll = 0
@@ -31,6 +32,8 @@ class _LynaeRollModifier(Effect):
 
 class Lynae(CubeBase):
     """60% chance to double the roll; 20% chance to stay still; 20% normal."""
+
+    CUBE_TYPE: ClassVar[str] = "Lynae"
 
     def _setup_effects(self) -> None:
         self._register(_LynaeRollModifier(self))

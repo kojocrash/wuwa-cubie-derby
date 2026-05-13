@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from typing import ClassVar
+
 from engine.cube_base import CubeBase
-from engine.effect_system import Effect, EffectContext, Step
+from engine.effect_system import Effect, Step, StepPostContext
 from engine.track import TRACK_SIZE
 
 _MIDPOINT_PAD = 16
@@ -23,20 +25,20 @@ class _MidpointTeleport(Effect):
     def __init__(self, owner: CubeBase) -> None:
         super().__init__(owner, Step.STEP_POST)
 
-    def condition(self, ctx: EffectContext) -> bool:
+    def matches(self, ctx: StepPostContext) -> bool:
         return (
             ctx.active_cube is self.owner
             and self.owner.position == _MIDPOINT_PAD
             and not self.owner.has_tag(_TAG, exact=True)
         )
 
-    def apply(self, ctx: EffectContext) -> None:
+    def apply(self, ctx: StepPostContext) -> None:
         aemeath = self.owner
         game = ctx.game
 
         candidates = [
             c for c in game.cubes
-            if not c.IS_ABBOWSER and c is not aemeath
+            if c.CUBE_TYPE != "Abbowser" and c is not aemeath
         ]
         if not candidates:
             return
@@ -49,17 +51,8 @@ class _MidpointTeleport(Effect):
         )
         target = candidates[0]
 
-        # Mark as used
         aemeath.add_tag(_TAG, timestamp=game.round_number)
-
-        # Remove Aemeath from her current position (leaving any cube above her behind)
-        game.pads[aemeath.position].remove(aemeath)
-
-        # Place on top of target's stack
-        game.pads[target.position].append(aemeath)
-        aemeath.position = target.position
-
-        # Cancel remaining movement this turn
+        aemeath.attach_above(target, game)
         ctx.pads_remaining = 0
 
 
@@ -68,6 +61,8 @@ class Aemeath(CubeBase):
     When reaching pad 16 (midpoint), teleports on top of the closest non-AB cube.
     Triggers once per match.
     """
+
+    CUBE_TYPE: ClassVar[str] = "Aemeath"
 
     def _setup_effects(self) -> None:
         self._register(_MidpointTeleport(self))

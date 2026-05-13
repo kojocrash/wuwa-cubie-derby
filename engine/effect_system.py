@@ -5,7 +5,7 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .game_state import GameState
+    from .game import Game
     from .cube_base import CubeBase
 
 
@@ -21,34 +21,78 @@ class Step(Enum):
     ROUND_END    = "round_end"     # after all cubes in a round have moved
 
 
+# ---------------------------------------------------------------------------
+# Context hierarchy
+# ---------------------------------------------------------------------------
+
 @dataclass
 class EffectContext:
-    game: GameState
-    step: Step
-    active_cube: CubeBase | None = None  # None for round-level steps (TURN_ORDER, ROUND_END)
-    subject_cube: CubeBase | None = None
+    """Base for all per-step contexts."""
+    game: Game
+    active_cube: CubeBase | None = None  # None for round-level steps
 
-    # Mutable fields — effects read and write these
+
+@dataclass
+class TurnOrderContext(EffectContext):
+    turn_order: list[CubeBase] = field(default_factory=list)  # mutable
+
+
+@dataclass
+class RollContext(EffectContext):
+    roll: int = 0                         # mutable
+
+
+@dataclass
+class PreMoveContext(EffectContext):
     roll: int = 0
-    total_pads: int = 0
-    pads_remaining: int = 0
-    direction: int = 1           # +1 forward, -1 backward
-    finish_triggered: bool = False
-    finish_suppressed: bool = False
-    cancelled: bool = False
-    data: dict = field(default_factory=dict)   # step-specific extras
+    total_pads: int = 0                   # mutable
 
+
+@dataclass
+class StepPreContext(EffectContext):
+    pads_remaining: int = 0              # mutable
+    direction: int = 1                   # mutable
+    cancelled: bool = False              # mutable
+
+
+@dataclass
+class StepPostContext(EffectContext):
+    pads_remaining: int = 0              # mutable
+    direction: int = 1
+
+
+@dataclass
+class FinishCheckContext(EffectContext):
+    direction: int = 1
+    finish_suppressed: bool = False      # mutable
+
+
+@dataclass
+class PadEffectContext(EffectContext):
+    pass
+
+
+@dataclass
+class TurnEndContext(EffectContext):
+    pass
+
+
+@dataclass
+class RoundEndContext(EffectContext):
+    pass
+
+
+# ---------------------------------------------------------------------------
+# Effect base class
+# ---------------------------------------------------------------------------
 
 class Effect:
-    step: Step
-    priority: int = 0  # higher priority fires first among same-step effects
-
     def __init__(self, owner: CubeBase, step: Step, priority: int = 0) -> None:
         self.owner = owner
         self.step = step
         self.priority = priority
 
-    def condition(self, ctx: EffectContext) -> bool:
+    def matches(self, ctx: EffectContext) -> bool:
         return True
 
     def apply(self, ctx: EffectContext) -> None:

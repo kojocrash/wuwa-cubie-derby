@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import ClassVar
+
 from engine.cube_base import CubeBase
 
 
@@ -9,7 +11,9 @@ _CYCLE = (3, 2, 1)
 class Mornye(CubeBase):
     """Dice rolls 3, 2, 1 in repeating succession."""
 
-    def __init__(self, name: str) -> None:
+    CUBE_TYPE: ClassVar[str] = "Mornye"
+
+    def __init__(self, name: str | None = None) -> None:
         self._turn_count: int = 0
         super().__init__(name)
 

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import random
+from typing import ClassVar
 
 from engine.cube_base import CubeBase
-from engine.effect_system import Effect, EffectContext, Step
+from engine.effect_system import Effect, Step, StepPostContext, RoundEndContext
 
 
 def _is_past_ab(cube: CubeBase, ab: CubeBase) -> bool:
@@ -29,10 +30,10 @@ class _TeleportToBottom(Effect):
     def __init__(self, owner: CubeBase) -> None:
         super().__init__(owner, Step.STEP_POST, priority=10)
 
-    def condition(self, ctx: EffectContext) -> bool:
+    def matches(self, ctx: StepPostContext) -> bool:
         return ctx.active_cube is self.owner
 
-    def apply(self, ctx: EffectContext) -> None:
+    def apply(self, ctx: StepPostContext) -> None:
         ctx.game.teleport_to_bottom(self.owner)
 
 
@@ -46,16 +47,16 @@ class _BackwardFinishCross(Effect):
     def __init__(self, owner: CubeBase) -> None:
         super().__init__(owner, Step.STEP_POST, priority=9)
 
-    def condition(self, ctx: EffectContext) -> bool:
+    def matches(self, ctx: StepPostContext) -> bool:
         return (
             ctx.active_cube is self.owner
             and ctx.direction == -1
             and self.owner.position == 0
         )
 
-    def apply(self, ctx: EffectContext) -> None:
-        for cube in ctx.game.pads[0]:
-            if not cube.IS_ABBOWSER:
+    def apply(self, ctx: StepPostContext) -> None:
+        for cube in ctx.game.get_stack(0):
+            if cube.CUBE_TYPE != "Abbowser":
                 cube.laps_needed += 1
 
 
@@ -68,28 +69,27 @@ class _SeparationTeleport(Effect):
     def __init__(self, owner: CubeBase) -> None:
         super().__init__(owner, Step.ROUND_END)
 
-    def condition(self, ctx: EffectContext) -> bool:
+    def matches(self, ctx: RoundEndContext) -> bool:
         ab = self.owner
         game = ctx.game
 
         if ab not in game.cubes:
             return False
         if ab.position == 0:
-            return False  # already at finish
-
-        # AB must not be in a stack with others
-        if len(game.pads[ab.position]) > 1:
             return False
 
-        # All regular cubes must be past AB
+        if len(game.get_stack(ab.position)) > 1:
+            return False
+
         return all(_is_past_ab(c, ab) for c in game.active_non_ab_cubes())
 
-    def apply(self, ctx: EffectContext) -> None:
+    def apply(self, ctx: RoundEndContext) -> None:
         ab = self.owner
         game = ctx.game
-        game.pads[ab.position].remove(ab)
-        game.pads[0].insert(0, ab)
+        game._detach_single(ab)
         ab.position = 0
+        game._append_to_top(ab, 0)
+        game.teleport_to_bottom(ab)
 
 
 class AbbowserCube(CubeBase):
@@ -99,7 +99,7 @@ class AbbowserCube(CubeBase):
     finish line whenever separated from all other cubes at round end.
     """
 
-    IS_ABBOWSER: bool = True
+    CUBE_TYPE: ClassVar[str] = "Abbowser"
 
     def base_roll(self) -> int:
         return random.randint(1, 6)
