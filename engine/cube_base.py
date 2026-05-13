@@ -4,7 +4,7 @@ import random
 from typing import TYPE_CHECKING, ClassVar
 
 from .tag_system import TagMixin
-from .effect_system import Effect, Step
+from .effect_system import Effect, Phase
 
 if TYPE_CHECKING:
     from .game import Game
@@ -89,9 +89,9 @@ class CubeBase(TagMixin):
     def _register(self, effect: Effect) -> None:
         self.effects.append(effect)
 
-    def get_effects(self, step: Step) -> list[Effect]:
+    def get_effects(self, phase: Phase) -> list[Effect]:
         return sorted(
-            [e for e in self.effects if e.step == step],
+            [e for e in self.effects if e.phase == phase],
             key=lambda e: -e.priority,
         )
 

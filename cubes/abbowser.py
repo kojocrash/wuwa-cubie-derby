@@ -5,7 +5,7 @@ from typing import ClassVar
 
 from engine.cube_base import CubeBase
 from engine.effect_system import (
-    Effect, Step,
+    Effect, Phase,
     TurnOrderContext, MovePostContext, RoundEndContext, PadEffectContext,
 )
 from engine.track import PadType
@@ -29,9 +29,9 @@ class _SpatialRiftSink(Effect):
     """In any spatial rift Abbowser lands in, force him to the bottom of the proposed order."""
 
     def __init__(self, owner: CubeBase) -> None:
-        super().__init__(owner, Step.PAD_EFFECT, priority=-10)
+        super().__init__(owner, Phase.PAD_EFFECT, priority=-10)
 
-    def matches(self, ctx: PadEffectContext) -> bool:
+    def can_trigger(self, ctx: PadEffectContext) -> bool:
         return ctx.pad_type == PadType.SPATIAL_RIFT and self.owner in ctx.new_order
 
     def apply(self, ctx: PadEffectContext) -> None:
@@ -43,9 +43,9 @@ class _SitOut(Effect):
     """Abbowser doesn't take turns in rounds 1 and 2."""
 
     def __init__(self, owner: CubeBase) -> None:
-        super().__init__(owner, Step.TURN_ORDER)
+        super().__init__(owner, Phase.TURN_ORDER)
 
-    def matches(self, ctx: TurnOrderContext) -> bool:
+    def can_trigger(self, ctx: TurnOrderContext) -> bool:
         return ctx.game.round_number < 3
 
     def apply(self, ctx: TurnOrderContext) -> None:
@@ -59,9 +59,9 @@ class _TeleportToBottom(Effect):
     """
 
     def __init__(self, owner: CubeBase) -> None:
-        super().__init__(owner, Step.MOVE_POST, priority=10)
+        super().__init__(owner, Phase.MOVE_POST, priority=10)
 
-    def matches(self, ctx: MovePostContext) -> bool:
+    def can_trigger(self, ctx: MovePostContext) -> bool:
         return ctx.active_cube is self.owner
 
     def apply(self, ctx: MovePostContext) -> None:
@@ -76,9 +76,9 @@ class _BackwardFinishCross(Effect):
     """
 
     def __init__(self, owner: CubeBase) -> None:
-        super().__init__(owner, Step.MOVE_POST, priority=9)
+        super().__init__(owner, Phase.MOVE_POST, priority=9)
 
-    def matches(self, ctx: MovePostContext) -> bool:
+    def can_trigger(self, ctx: MovePostContext) -> bool:
         return (
             ctx.active_cube is self.owner
             and ctx.stride < 0
@@ -98,9 +98,9 @@ class _SeparationTeleport(Effect):
     """
 
     def __init__(self, owner: CubeBase) -> None:
-        super().__init__(owner, Step.ROUND_END)
+        super().__init__(owner, Phase.ROUND_END)
 
-    def matches(self, ctx: RoundEndContext) -> bool:
+    def can_trigger(self, ctx: RoundEndContext) -> bool:
         ab = self.owner
         game = ctx.game
 

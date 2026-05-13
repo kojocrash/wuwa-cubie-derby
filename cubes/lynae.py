@@ -4,7 +4,7 @@ import random
 from typing import ClassVar
 
 from engine.cube_base import CubeBase
-from engine.effect_system import Effect, Step, RollContext
+from engine.effect_system import Effect, Phase, RollContext
 
 
 class _LynaeRollModifier(Effect):
@@ -16,9 +16,9 @@ class _LynaeRollModifier(Effect):
     """
 
     def __init__(self, owner: CubeBase) -> None:
-        super().__init__(owner, Step.ROLL_POST)
+        super().__init__(owner, Phase.ROLL_POST)
 
-    def matches(self, ctx: RollContext) -> bool:
+    def can_trigger(self, ctx: RollContext) -> bool:
         return ctx.active_cube is self.owner
 
     def apply(self, ctx: RollContext) -> None:

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import ClassVar
 
 from engine.cube_base import CubeBase
-from engine.effect_system import Effect, Step, TurnEndContext
+from engine.effect_system import Effect, Phase, TurnEndContext
 from engine.track import TRACK_SIZE
 
 _MIDPOINT_PAD = TRACK_SIZE // 2
@@ -20,9 +20,9 @@ class _MidpointTeleport(Effect):
     """
 
     def __init__(self, owner: CubeBase) -> None:
-        super().__init__(owner, Step.TURN_END)
+        super().__init__(owner, Phase.TURN_END)
 
-    def matches(self, ctx: TurnEndContext) -> bool:
+    def can_trigger(self, ctx: TurnEndContext) -> bool:
         return (
             ctx.active_cube is self.owner
             and self.owner.position >= _MIDPOINT_PAD

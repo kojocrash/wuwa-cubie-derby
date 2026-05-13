@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from .cube_base import CubeBase
 
 
-class Step(Enum):
+class Phase(Enum):
     TURN_ORDER   = "turn_order"    # before each round: effects can reorder turn_order list
     ROLL_POST    = "roll_post"     # after base_roll(); effects modify roll value
     PRE_MOVE     = "pre_move"      # before movement loop; effects can modify total_pads
@@ -94,12 +94,12 @@ class RoundEndContext(EffectContext):
 # ---------------------------------------------------------------------------
 
 class Effect:
-    def __init__(self, owner: CubeBase, step: Step, priority: int = 0) -> None:
+    def __init__(self, owner: CubeBase, phase: Phase, priority: int = 0) -> None:
         self.owner = owner
-        self.step = step
+        self.phase = phase
         self.priority = priority
 
-    def matches(self, ctx: EffectContext) -> bool:
+    def can_trigger(self, ctx: EffectContext) -> bool:
         return True
 
     def apply(self, ctx: EffectContext) -> None:

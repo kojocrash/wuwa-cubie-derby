@@ -6,7 +6,7 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 
 from .effect_system import (
-    Effect, Step,
+    Effect, Phase,
     EffectContext,
     TurnOrderContext, RollContext, PreMoveContext,
     MovePreContext, MovePostContext, FinishCheckContext,
@@ -214,8 +214,8 @@ class Game:
     # Effect gathering
     # ------------------------------------------------------------------
 
-    def all_effects(self, step: Step) -> list[Effect]:
-        effects = [e for cube in self.cubes for e in cube.get_effects(step)]
+    def all_effects(self, phase: Phase) -> list[Effect]:
+        effects = [e for cube in self.cubes for e in cube.get_effects(phase)]
         effects.sort(key=lambda e: -e.priority)
         return effects
 
@@ -237,7 +237,7 @@ class Game:
             turn_order = list(self.cubes)
             random.shuffle(turn_order)
             ctx = TurnOrderContext(game=self, turn_order=turn_order)
-            self._run_step(Step.TURN_ORDER, ctx)
+            self._trigger_phase_effects(Phase.TURN_ORDER, ctx)
             turn_order = ctx.turn_order
 
             if self.verbose:
@@ -273,7 +273,7 @@ class Game:
 
             # --- Round-end phase ---
             ctx = RoundEndContext(game=self)
-            self._run_step(Step.ROUND_END, ctx)
+            self._trigger_phase_effects(Phase.ROUND_END, ctx)
 
             if self.verbose:
                 self._vprint_board(f"after round {self.round_number}")
@@ -315,7 +315,7 @@ class Game:
             pads_remaining=pads_remaining, stride=stride,
             is_pad_push=is_pad_push,
         )
-        self._run_step(Step.MOVE_POST, ctx)
+        self._trigger_phase_effects(Phase.MOVE_POST, ctx)
         pads_remaining = ctx.pads_remaining
 
         if stride > 0 and cube.position == 0:
@@ -352,7 +352,7 @@ class Game:
                     game=self, active_cube=cube,
                     pads_remaining=pads_remaining, stride=stride,
                 )
-                self._run_step(Step.MOVE_PRE, ctx)
+                self._trigger_phase_effects(Phase.MOVE_PRE, ctx)
                 pads_remaining = ctx.pads_remaining
                 stride = ctx.stride
                 if ctx.cancelled:
@@ -370,12 +370,12 @@ class Game:
 
         # ROLL_POST: effects can modify the pre-rolled value
         ctx = RollContext(game=self, active_cube=cube, roll=raw_roll)
-        self._run_step(Step.ROLL_POST, ctx)
+        self._trigger_phase_effects(Phase.ROLL_POST, ctx)
         move_count = ctx.roll
 
         # PRE_MOVE: effects can adjust how many moves will be made
         ctx = PreMoveContext(game=self, active_cube=cube, roll=move_count, move_count=move_count)
-        self._run_step(Step.PRE_MOVE, ctx)
+        self._trigger_phase_effects(Phase.PRE_MOVE, ctx)
         move_count = ctx.move_count
 
         if self.verbose:
@@ -398,7 +398,7 @@ class Game:
 
         # --- Turn-end effects ---
         ctx = TurnEndContext(game=self, active_cube=cube)
-        self._run_step(Step.TURN_END, ctx)
+        self._trigger_phase_effects(Phase.TURN_END, ctx)
 
     # ------------------------------------------------------------------
     # Pad effects
@@ -423,7 +423,7 @@ class Game:
                 game=self, active_cube=cube, pad_type=pad_type, push_pads=1,
             )
 
-        self._run_step(Step.PAD_EFFECT, ctx)
+        self._trigger_phase_effects(Phase.PAD_EFFECT, ctx)
 
         # Execute using the (possibly modified) context values
         if pad_type == PadType.THRUSTER:
@@ -460,7 +460,7 @@ class Game:
         Returns True if the race is now finished.
         """
         ctx = FinishCheckContext(game=self, active_cube=cube, stride=stride)
-        self._run_step(Step.FINISH_CHECK, ctx)
+        self._trigger_phase_effects(Phase.FINISH_CHECK, ctx)
 
         if ctx.finish_suppressed:
             return False
@@ -480,9 +480,9 @@ class Game:
     # Internal dispatcher
     # ------------------------------------------------------------------
 
-    def _run_step(self, step: Step, ctx: EffectContext) -> None:
-        for eff in self.all_effects(step):
-            if eff.matches(ctx):
+    def _trigger_phase_effects(self, phase: Phase, ctx: EffectContext) -> None:
+        for eff in self.all_effects(phase):
+            if eff.can_trigger(ctx):
                 eff.apply(ctx)
 
     # ------------------------------------------------------------------
