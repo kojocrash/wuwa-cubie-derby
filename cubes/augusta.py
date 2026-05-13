@@ -3,17 +3,13 @@ from __future__ import annotations
 from typing import ClassVar
 
 from engine.cube_base import CubeBase
-from engine.effect_system import Effect, Phase, TurnOrderContext
+from engine.effect_system import Effect, Phase, PreMoveContext, TurnOrderContext
 
 _TAG = "augusta.go_last"
 
 
 class _GoLastNextRound(Effect):
-    """
-    If Augusta was flagged last round (she skipped), move her to the end of this
-    round's turn order and consume the flag.  High priority so it fires before
-    _SkipTurn, ensuring the flag from a previous round is processed first.
-    """
+    """If Augusta was flagged last round, move her to the end of this round's turn order."""
 
     def __init__(self, owner: CubeBase) -> None:
         super().__init__(owner, Phase.TURN_ORDER, priority=10)
@@ -27,36 +23,35 @@ class _GoLastNextRound(Effect):
         self.owner.remove_tags(_TAG, exact=True)
 
 
-class _SkipTurn(Effect):
+class _ZeroMoveWhenAtTop(Effect):
     """
-    If Augusta is at the top of a stack (with at least one cube below) she sits
-    out this round and is flagged to move last the following round.  Low priority
-    so it fires after _GoLastNextRound has already processed any existing flag.
+    At PRE_MOVE, if Augusta is at the top of a stack (with at least one cube below),
+    her move count is reduced to 0 and she is flagged to move last next round.
     """
 
     def __init__(self, owner: CubeBase) -> None:
-        super().__init__(owner, Phase.TURN_ORDER, priority=-10)
+        super().__init__(owner, Phase.PRE_MOVE)
 
-    def can_trigger(self, ctx: TurnOrderContext) -> bool:
+    def can_trigger(self, ctx: PreMoveContext) -> bool:
         return (
-            self.owner in ctx.turn_order
+            ctx.active_cube is self.owner
             and self.owner.above is None
             and self.owner.below is not None
         )
 
-    def apply(self, ctx: TurnOrderContext) -> None:
-        ctx.turn_order.remove(self.owner)
+    def apply(self, ctx: PreMoveContext) -> None:
+        ctx.move_count = 0
         self.owner.add_tag(_TAG)
 
 
 class Augusta(CubeBase):
     """
-    When at the top of a stack at the start of a round, sits out that round and
-    moves last the following round.
+    When at the top of a stack at the start of her turn, moves 0 pads that turn
+    and goes last the following round.
     """
 
     CUBE_TYPE: ClassVar[str] = "Augusta"
 
     def _setup_effects(self) -> None:
         self._register(_GoLastNextRound(self))
-        self._register(_SkipTurn(self))
+        self._register(_ZeroMoveWhenAtTop(self))
