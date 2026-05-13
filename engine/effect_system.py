@@ -16,7 +16,7 @@ class Step(Enum):
     ROLL_POST    = "roll_post"     # after base_roll(); effects modify roll value
     PRE_MOVE     = "pre_move"      # before movement loop; effects can modify total_pads
     STEP_PRE     = "step_pre"      # before each individual pad step
-    STEP_POST    = "step_post"     # after each individual pad step (stacking/AB pickup)
+    STEP_POST    = "step_post"     # after each individual pad step
     FINISH_CHECK = "finish_check"  # on forward crossing of pad 0; effects can suppress
     PAD_EFFECT   = "pad_effect"    # before landing-pad executes; effects can modify outcome
     TURN_END     = "turn_end"      # after full turn including pad effects
@@ -61,6 +61,7 @@ class StepPreContext(EffectContext):
 class StepPostContext(EffectContext):
     pads_remaining: int = 0              # mutable
     stride: int = 1                      # sign=direction, magnitude=pads per step
+    is_pad_push: bool = False            # True when this step was triggered by a thruster/blocker
 
 
 @dataclass
