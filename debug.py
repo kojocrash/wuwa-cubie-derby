@@ -9,17 +9,17 @@ Each entry is either a cube class (first-half, starts at pad 1) or a
 Mix and match — if any pad is given, all None entries default to pad 0.
 """
 
-from cubes import Chisa, Mornye, Lynae, Aemeath, Shorekeeper, Carlotta
+from cubes import Augusta, Iuno, Phrolova, Changli, Jinhsi, Calcharo
 from engine.game import Game
 
 # ── Edit this list to change who races and where they start ──────────────────
 PARTICIPANTS = [
-    Chisa,
-    Mornye,
-    Lynae,
-    Aemeath,
-    Shorekeeper,
-    Carlotta,
+    Augusta,
+    Iuno,
+    Phrolova,
+    Changli,
+    Jinhsi,
+    Calcharo,
 ]
 # ─────────────────────────────────────────────────────────────────────────────
 

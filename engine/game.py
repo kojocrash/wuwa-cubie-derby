@@ -134,6 +134,13 @@ class Game:
             old_bottom.below = cube
         self.pads[pad] = cube
 
+    def teleport_to_top(self, cube: CubeBase) -> None:
+        """Reposition cube to the top of its current pad's stack."""
+        if cube.above is None:
+            return  # already at top
+        self._detach_single(cube)
+        self._append_to_top(cube, cube.position)
+
     # ------------------------------------------------------------------
     # Setup
     # ------------------------------------------------------------------
@@ -224,7 +231,7 @@ class Game:
     # ------------------------------------------------------------------
 
     def run_game(self) -> list[CubeBase]:
-        """Run until someone finishes. Returns ranking best → worst (no AB)."""
+        """Run until someone finishes. Returns ranking best → worst (no Abbowser)."""
         while not self.race_finished:
             self.round_number += 1
 
@@ -277,6 +284,9 @@ class Game:
 
             if self.verbose:
                 self._vprint_board(f"after round {self.round_number}")
+
+        if self.verbose:
+            self._vprint_board("FINAL")
 
         return self.get_ranking()
 

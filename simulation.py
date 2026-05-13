@@ -29,12 +29,12 @@ import argparse
 import sys
 from collections import defaultdict
 
-from cubes.aemeath import Aemeath
-from cubes.carlotta import Carlotta
-from cubes.chisa import Chisa
-from cubes.lynae import Lynae
-from cubes.mornye import Mornye
-from cubes.shorekeeper import Shorekeeper
+from cubes.augusta import Augusta
+from cubes.calcharo import Calcharo
+from cubes.changli import Changli
+from cubes.iuno import Iuno
+from cubes.jinhsi import Jinhsi
+from cubes.phrolova import Phrolova
 from engine.game import Game
 
 
@@ -126,7 +126,7 @@ def main() -> None:
 
     print(f"Running {args.runs:,} simulations…", file=sys.stderr)
     results = simulate(
-        [Chisa, Mornye, Lynae, Aemeath, Shorekeeper, Carlotta],
+        [Augusta, Iuno, Phrolova, Changli, Jinhsi, Calcharo],
         n=args.runs,
     )
     print_results(results)
