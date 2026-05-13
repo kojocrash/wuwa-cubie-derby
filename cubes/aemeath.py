@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import ClassVar
 
 from engine.cube_base import CubeBase
-from engine.effect_system import Effect, Step, MovePostContext
+from engine.effect_system import Effect, Step, TurnEndContext
 from engine.track import TRACK_SIZE
 
-_MIDPOINT_PAD = 16
+_MIDPOINT_PAD = TRACK_SIZE // 2
 _TAG = "aemeath.midpoint"
 
 
@@ -17,22 +17,24 @@ def _circular_distance(a: int, b: int) -> int:
 
 class _MidpointTeleport(Effect):
     """
-    When Aemeath first steps onto pad 16 (the midpoint), she teleports on top
-    of the closest non-Abbowser cube (skipping Abbowser if it would be closest).
-    Triggers only once per match.  Cancels any remaining movement this turn.
+    At the end of the turn Aemeath first crosses the midpoint (TRACK_SIZE // 2),
+    she teleports on top of the closest non-Abbowser cube.  Triggers once per match.
+    Fires at TURN_END so the teleport happens after all movement and pad effects
+    for that turn have resolved.  "Crosses" means her final position is at or past
+    the midpoint, which handles strides greater than 1 skipping the exact pad.
     """
 
     def __init__(self, owner: CubeBase) -> None:
-        super().__init__(owner, Step.MOVE_POST)
+        super().__init__(owner, Step.TURN_END)
 
-    def matches(self, ctx: MovePostContext) -> bool:
+    def matches(self, ctx: TurnEndContext) -> bool:
         return (
             ctx.active_cube is self.owner
-            and self.owner.position == _MIDPOINT_PAD
+            and self.owner.position >= _MIDPOINT_PAD
             and not self.owner.has_tag(_TAG, exact=True)
         )
 
-    def apply(self, ctx: MovePostContext) -> None:
+    def apply(self, ctx: TurnEndContext) -> None:
         aemeath = self.owner
         game = ctx.game
 
@@ -53,13 +55,12 @@ class _MidpointTeleport(Effect):
 
         aemeath.add_tag(_TAG, timestamp=game.round_number)
         aemeath.attach_above(target, game)
-        ctx.pads_remaining = 0
 
 
 class Aemeath(CubeBase):
     """
-    When reaching pad 16 (midpoint), teleports on top of the closest non-AB cube.
-    Triggers once per match.
+    Teleports on top of the closest non-Abbowser cube the first time she crosses
+    the midpoint (TRACK_SIZE // 2).  Triggers once per match at TURN_END.
     """
 
     CUBE_TYPE: ClassVar[str] = "Aemeath"
