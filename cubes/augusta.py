@@ -51,4 +51,4 @@ class Augusta(CubeBase):
 
     def _setup_effects(self) -> None:
         self._register(_GoLastNextRound(self))
-        self._register(_ZeroMoveWhenAtTop(self))
+        self._register(_SkipTurn(self))
