@@ -6,7 +6,7 @@ from typing import ClassVar
 from engine.cube_base import CubeBase
 from engine.effect_system import (
     Effect, Step,
-    TurnOrderContext, StepPostContext, RoundEndContext, PadEffectContext,
+    TurnOrderContext, MovePostContext, RoundEndContext, PadEffectContext,
 )
 from engine.track import PadType
 
@@ -59,12 +59,12 @@ class _TeleportToBottom(Effect):
     """
 
     def __init__(self, owner: CubeBase) -> None:
-        super().__init__(owner, Step.STEP_POST, priority=10)
+        super().__init__(owner, Step.MOVE_POST, priority=10)
 
-    def matches(self, ctx: StepPostContext) -> bool:
+    def matches(self, ctx: MovePostContext) -> bool:
         return ctx.active_cube is self.owner
 
-    def apply(self, ctx: StepPostContext) -> None:
+    def apply(self, ctx: MovePostContext) -> None:
         ctx.game.teleport_to_bottom(self.owner)
 
 
@@ -76,16 +76,16 @@ class _BackwardFinishCross(Effect):
     """
 
     def __init__(self, owner: CubeBase) -> None:
-        super().__init__(owner, Step.STEP_POST, priority=9)
+        super().__init__(owner, Step.MOVE_POST, priority=9)
 
-    def matches(self, ctx: StepPostContext) -> bool:
+    def matches(self, ctx: MovePostContext) -> bool:
         return (
             ctx.active_cube is self.owner
             and ctx.stride < 0
             and self.owner.position == 0
         )
 
-    def apply(self, ctx: StepPostContext) -> None:
+    def apply(self, ctx: MovePostContext) -> None:
         for cube in ctx.game.get_stack(0):
             if not cube.is_abbowser:
                 cube.laps_needed += 1

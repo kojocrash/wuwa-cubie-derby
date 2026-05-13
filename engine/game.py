@@ -9,7 +9,7 @@ from .effect_system import (
     Effect, Step,
     EffectContext,
     TurnOrderContext, RollContext, PreMoveContext,
-    StepPreContext, StepPostContext, FinishCheckContext,
+    MovePreContext, MovePostContext, FinishCheckContext,
     PadEffectContext, TurnEndContext, RoundEndContext,
 )
 from .track import TRACK_SIZE, PadType, get_pad_type
@@ -284,7 +284,7 @@ class Game:
     # Turn execution
     # ------------------------------------------------------------------
 
-    def _execute_step(
+    def _move_one_pad(
         self,
         cube: CubeBase,
         stride: int,
@@ -292,9 +292,9 @@ class Game:
         is_pad_push: bool = False,
     ) -> tuple[int, bool]:
         """
-        Move cube one pad in direction stride, fire STEP_POST, check the finish line.
+        Move cube one pad, fire MOVE_POST, check the finish line.
 
-        pads_remaining: steps still to go after this one, passed into STEP_POST so
+        pads_remaining: moves still to go after this one; passed into MOVE_POST so
         effects can modify it.  Returns (updated_pads_remaining, should_stop).
         """
         old_pos = cube.position
@@ -308,13 +308,13 @@ class Game:
             )
             print(f"    pad {old_pos} → pad {next_pad}{carrying}")
 
-        step_ctx = StepPostContext(
+        ctx = MovePostContext(
             game=self, active_cube=cube,
             pads_remaining=pads_remaining, stride=stride,
             is_pad_push=is_pad_push,
         )
-        self._run_step(Step.STEP_POST, step_ctx)
-        pads_remaining = step_ctx.pads_remaining
+        self._run_step(Step.MOVE_POST, ctx)
+        pads_remaining = ctx.pads_remaining
 
         if stride > 0 and cube.position == 0:
             if self.verbose:
@@ -326,6 +326,43 @@ class Game:
             return pads_remaining, True
 
         return pads_remaining, False
+
+    def _run_movement(
+        self,
+        cube: CubeBase,
+        stride: int,
+        total_pads: int,
+        is_pad_push: bool = False,
+    ) -> bool:
+        """
+        Move cube one pad at a time for up to total_pads pads.
+
+        For regular movement (not is_pad_push) fires MOVE_PRE before each pad,
+        which can cancel, adjust the remaining count, or change the stride.
+        MOVE_POST effects that modify pads_remaining mid-push are respected.
+        Returns True if at least one pad was covered.
+        """
+        pads_remaining = total_pads
+        moved = False
+        while pads_remaining > 0:
+            if not is_pad_push:
+                ctx = MovePreContext(
+                    game=self, active_cube=cube,
+                    pads_remaining=pads_remaining, stride=stride,
+                )
+                self._run_step(Step.MOVE_PRE, ctx)
+                pads_remaining = ctx.pads_remaining
+                stride = ctx.stride
+                if ctx.cancelled:
+                    if self.verbose:
+                        print(f"    (movement cancelled)")
+                    return moved
+            pads_remaining -= 1
+            moved = True
+            pads_remaining, stop = self._move_one_pad(cube, stride, pads_remaining, is_pad_push)
+            if stop:
+                return moved
+        return moved
 
     def _execute_turn(self, cube: CubeBase) -> None:
         raw_roll = self.round_rolls[cube.name]
@@ -344,31 +381,8 @@ class Game:
             roll_str = str(raw_roll) if total_pads == raw_roll else f"{raw_roll} → {total_pads}"
             print(f"\n  [{cube.name}]  pad {cube.position}  roll={roll_str}  ({total_pads} steps)")
 
-        # stride: sign = direction (+forward / -backward), magnitude = pads covered per step
         stride = -1 if cube.is_abbowser else 1
-        pads_remaining = total_pads
-        moved = False
-
-        # --- Movement loop ---
-        while pads_remaining > 0:
-            # STEP_PRE
-            ctx = StepPreContext(
-                game=self, active_cube=cube,
-                pads_remaining=pads_remaining, stride=stride,
-            )
-            self._run_step(Step.STEP_PRE, ctx)
-            pads_remaining = ctx.pads_remaining
-            stride = ctx.stride
-            if ctx.cancelled:
-                if self.verbose:
-                    print(f"    (movement cancelled)")
-                break
-
-            moved = True
-            pads_remaining -= 1
-            pads_remaining, stop = self._execute_step(cube, stride, pads_remaining)
-            if stop:
-                break
+        moved = self._run_movement(cube, stride, total_pads)
 
         # --- Pad effect (landing pad trigger) ---
         if moved and not self.race_finished:
@@ -414,24 +428,14 @@ class Game:
         if pad_type == PadType.THRUSTER:
             if self.verbose:
                 print(f"    [THRUSTER at pad {cube.position}] pushing {ctx.push_pads} pad(s) forward")
-            pads_remaining = ctx.push_pads
-            while pads_remaining > 0:
-                pads_remaining -= 1
-                pads_remaining, stop = self._execute_step(cube, 1, pads_remaining, is_pad_push=True)
-                if stop:
-                    return
+            self._run_movement(cube, 1, ctx.push_pads, is_pad_push=True)
             if not self.race_finished:
                 self._apply_pad_effect(cube)
 
         elif pad_type == PadType.BLOCKER:
             if self.verbose:
                 print(f"    [BLOCKER at pad {cube.position}] pushing {ctx.push_pads} pad(s) backward")
-            pads_remaining = ctx.push_pads
-            while pads_remaining > 0:
-                pads_remaining -= 1
-                pads_remaining, stop = self._execute_step(cube, -1, pads_remaining, is_pad_push=True)
-                if stop:
-                    return
+            self._run_movement(cube, -1, ctx.push_pads, is_pad_push=True)
             if not self.race_finished:
                 self._apply_pad_effect(cube)
 
@@ -451,7 +455,7 @@ class Game:
         """
         Called when stride > 0 and cube landed on pad 0.
         Fires FINISH_CHECK effects (which may suppress the crossing).
-        Decrements laps_needed for every non-AB cube in the moving unit.
+        Decrements laps_needed for every non-Abbowser cube in the moving unit.
         Returns True if the race is now finished.
         """
         ctx = FinishCheckContext(game=self, active_cube=cube, stride=stride)
