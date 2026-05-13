@@ -13,10 +13,10 @@ from engine.track import PadType
 
 def _is_past_ab(cube: CubeBase, ab: CubeBase) -> bool:
     """
-    True if *cube* is 'past' AB in the forward race direction.
-    AB moves backward from pad 0; cubes with higher pad numbers have more
-    forward progress and are considered past AB.
-    Pad 0 is the finish line — a cube there is always 'past' any non-zero AB pos.
+    True if *cube* is 'past' Abbowser in the forward race direction.
+    Abbowser moves backward from pad 0; cubes with higher pad numbers have more
+    forward progress and are considered past Abbowser.
+    Pad 0 is the finish line — a cube there is always 'past' any non-zero Abbowser pos.
     """
     if ab.position == 0:
         return False
@@ -26,10 +26,10 @@ def _is_past_ab(cube: CubeBase, ab: CubeBase) -> bool:
 
 
 class _SpatialRiftSink(Effect):
-    """In any spatial rift AB lands in, force him to the bottom of the proposed order."""
+    """In any spatial rift Abbowser lands in, force him to the bottom of the proposed order."""
 
     def __init__(self, owner: CubeBase) -> None:
-        super().__init__(owner, Step.PAD_EFFECT, priority=10)
+        super().__init__(owner, Step.PAD_EFFECT, priority=-10)
 
     def matches(self, ctx: PadEffectContext) -> bool:
         return ctx.pad_type == PadType.SPATIAL_RIFT and self.owner in ctx.new_order
@@ -40,7 +40,7 @@ class _SpatialRiftSink(Effect):
 
 
 class _SitOut(Effect):
-    """AB doesn't take turns in rounds 1 and 2."""
+    """Abbowser doesn't take turns in rounds 1 and 2."""
 
     def __init__(self, owner: CubeBase) -> None:
         super().__init__(owner, Step.TURN_ORDER)
@@ -54,7 +54,7 @@ class _SitOut(Effect):
 
 class _TeleportToBottom(Effect):
     """
-    After every step AB takes, he sinks to the bottom of whatever stack he's in.
+    After every step Abbowser takes, he sinks to the bottom of whatever stack he's in.
     This handles both landing on an existing stack and passing through one.
     """
 
@@ -70,9 +70,9 @@ class _TeleportToBottom(Effect):
 
 class _BackwardFinishCross(Effect):
     """
-    When AB steps backward onto pad 0, all non-AB cubes he's carrying get
+    When Abbowser steps backward onto pad 0, all non-Abbowser cubes he's carrying get
     their laps_needed incremented (they've been set back past the finish line).
-    Fires after _TeleportToBottom so AB is already at the bottom of the stack.
+    Fires after _TeleportToBottom so Abbowser is already at the bottom of the stack.
     """
 
     def __init__(self, owner: CubeBase) -> None:
@@ -93,8 +93,8 @@ class _BackwardFinishCross(Effect):
 
 class _SeparationTeleport(Effect):
     """
-    At round end: if AB is alone AND all other cubes are past him in the race
-    direction, teleport AB back to the finish line (pad 0).
+    At round end: if Abbowser is alone AND all other cubes are past him in the race
+    direction, teleport Abbowser back to the finish line (pad 0).
     """
 
     def __init__(self, owner: CubeBase) -> None:

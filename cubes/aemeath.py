@@ -18,7 +18,7 @@ def _circular_distance(a: int, b: int) -> int:
 class _MidpointTeleport(Effect):
     """
     When Aemeath first steps onto pad 16 (the midpoint), she teleports on top
-    of the closest non-AB cube (skipping AB if it would be closest).
+    of the closest non-Abbowser cube (skipping Abbowser if it would be closest).
     Triggers only once per match.  Cancels any remaining movement this turn.
     """
 

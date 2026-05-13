@@ -202,7 +202,7 @@ class Game:
         return base + (cube.laps_needed - 1) * TRACK_SIZE
 
     def get_ranking(self) -> list[CubeBase]:
-        """Non-AB cubes sorted best → worst."""
+        """Non-Abbowser cubes sorted best → worst."""
         def sort_key(cube: CubeBase):
             dist = self.get_adjusted_distance(cube)
             stack = self.get_stack(cube.position)
@@ -394,22 +394,39 @@ class Game:
 
         # Execute using the (possibly modified) context values
         if pad_type == PadType.THRUSTER:
-            old_pad = cube.position
-            new_pad = (cube.position + ctx.push_pads) % TRACK_SIZE
             if self.verbose:
-                print(f"    [THRUSTER at pad {old_pad}] → pad {new_pad}")
-            self.move_unit(cube, new_pad)
-            if new_pad == 0:
+                print(f"    [THRUSTER at pad {cube.position}] pushing {ctx.push_pads} pad(s) forward")
+            for pads_left in range(ctx.push_pads, 0, -1):
+                next_pad = (cube.position + 1) % TRACK_SIZE
+                self.move_unit(cube, next_pad)
                 if self.verbose:
-                    print(f"    *** {cube.name} crosses the finish line (thruster)!")
-                self._check_and_resolve_finish(cube, stride=1)
+                    print(f"    thruster step → pad {next_pad}")
+                step_ctx = StepPostContext(
+                    game=self, active_cube=cube, pads_remaining=pads_left - 1, stride=1,
+                )
+                self._run_step(Step.STEP_POST, step_ctx)
+                if next_pad == 0:
+                    if self.verbose:
+                        print(f"    *** {cube.name} crosses the finish line (thruster)!")
+                    if self._check_and_resolve_finish(cube, stride=1):
+                        return
+                if self.race_finished:
+                    return
 
         elif pad_type == PadType.BLOCKER:
-            old_pad = cube.position
-            new_pad = (cube.position - ctx.push_pads) % TRACK_SIZE
             if self.verbose:
-                print(f"    [BLOCKER at pad {old_pad}] → pad {new_pad}")
-            self.move_unit(cube, new_pad)
+                print(f"    [BLOCKER at pad {cube.position}] pushing {ctx.push_pads} pad(s) backward")
+            for pads_left in range(ctx.push_pads, 0, -1):
+                next_pad = (cube.position - 1) % TRACK_SIZE
+                self.move_unit(cube, next_pad)
+                if self.verbose:
+                    print(f"    blocker step → pad {next_pad}")
+                step_ctx = StepPostContext(
+                    game=self, active_cube=cube, pads_remaining=pads_left - 1, stride=-1,
+                )
+                self._run_step(Step.STEP_POST, step_ctx)
+                if self.race_finished:
+                    return
 
         elif pad_type == PadType.SPATIAL_RIFT:
             if self.verbose:
