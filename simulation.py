@@ -56,7 +56,7 @@ def _do_race(parsed: list[tuple[type, int | None]]) -> list[str]:
 
 def simulate(
     participants: list,
-    n: int = 10_000,
+    n: int = 2_000,
 ) -> dict:
     """
     Run *n* races and aggregate results.
@@ -120,8 +120,8 @@ def print_results(results: dict) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Cubie Derby race simulator")
-    parser.add_argument("-n", "--runs", type=int, default=10_000,
-                        help="number of simulations to run (default: 10,000)")
+    parser.add_argument("-n", "--runs", type=int, default=2_000,
+                        help="number of simulations to run (default: 2,000)")
     args = parser.parse_args()
 
     print(f"Running {args.runs:,} simulations…", file=sys.stderr)

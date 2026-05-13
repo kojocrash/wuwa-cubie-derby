@@ -23,11 +23,8 @@ class _GoLastNextRound(Effect):
         self.owner.remove_tags(_TAG, exact=True)
 
 
-class _ZeroMoveWhenAtTop(Effect):
-    """
-    At PRE_MOVE, if Augusta is at the top of a stack (with at least one cube below),
-    her move count is reduced to 0 and she is flagged to move last next round.
-    """
+class _SkipTurn(Effect):
+    """If Augusta is at the top of a stack, she skips her turn and goes last next round."""
 
     def __init__(self, owner: CubeBase) -> None:
         super().__init__(owner, Phase.PRE_MOVE)
@@ -46,8 +43,8 @@ class _ZeroMoveWhenAtTop(Effect):
 
 class Augusta(CubeBase):
     """
-    When at the top of a stack at the start of her turn, moves 0 pads that turn
-    and goes last the following round.
+    When at the top of a stack at the start of her turn, skips her turn and
+    goes last the following round.
     """
 
     CUBE_TYPE: ClassVar[str] = "Augusta"
