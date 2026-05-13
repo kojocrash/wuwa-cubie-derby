@@ -43,7 +43,7 @@ class _MidpointTeleport(Effect):
         closest_pad = min(c.position for c in candidates)
         target = next(c for c in candidates if c.position == closest_pad)
 
-        aemeath.add_tag(_TAG, timestamp=game.round_number)
+        aemeath.add_tag(_TAG)
         aemeath.attach_above(target, game)
 
 

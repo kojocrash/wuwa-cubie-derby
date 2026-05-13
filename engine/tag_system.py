@@ -8,15 +8,14 @@ from typing import Callable, Optional
 class Tag:
     name: str
     context: dict = field(default_factory=dict)
-    timestamp: int = 0  # round number when added
 
 
 class TagMixin:
     def __init_tags__(self) -> None:
         self._tags: list[Tag] = []
 
-    def add_tag(self, name: str, context: dict | None = None, timestamp: int = 0) -> Tag:
-        tag = Tag(name=name, context=context or {}, timestamp=timestamp)
+    def add_tag(self, name: str, context: dict | None = None) -> Tag:
+        tag = Tag(name=name, context=context or {})
         self._tags.append(tag)
         return tag
 
