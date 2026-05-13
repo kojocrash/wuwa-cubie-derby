@@ -383,10 +383,10 @@ class Game:
             print(f"\n  [{cube.name}]  pad {cube.position}  roll={roll_str}  ({move_count} moves)")
 
         stride = -1 if cube.is_abbowser else 1
-        moved = self._run_movement(cube, stride, move_count)
+        self._run_movement(cube, stride, move_count)
 
         # --- Pad effect (landing pad trigger) ---
-        if moved and not self.race_finished:
+        if not self.race_finished:
             self._apply_pad_effect(cube)
 
         if self.verbose:
