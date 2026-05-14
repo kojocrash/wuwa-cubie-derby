@@ -29,12 +29,7 @@ import argparse
 import sys
 from collections import defaultdict
 
-from cubes.augusta import Augusta
-from cubes.calcharo import Calcharo
-from cubes.changli import Changli
-from cubes.iuno import Iuno
-from cubes.jinhsi import Jinhsi
-from cubes.phrolova import Phrolova
+from config import PARTICIPANTS
 from engine.game import Game
 
 
@@ -125,10 +120,7 @@ def main() -> None:
     args = parser.parse_args()
 
     print(f"Running {args.runs:,} simulations…", file=sys.stderr)
-    results = simulate(
-        [Augusta, Iuno, Phrolova, Changli, Jinhsi, Calcharo],
-        n=args.runs,
-    )
+    results = simulate(PARTICIPANTS, n=args.runs)
     print_results(results)
 
 
