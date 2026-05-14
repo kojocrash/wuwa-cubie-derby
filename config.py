@@ -20,5 +20,5 @@ PARTICIPANTS: list = [
     (Jinhsi,    -2),
     (Augusta,   -1),
     (Changli,   -1),
-    (Phrolova,   0),
+    Phrolova,          # no starting pad — defaults to pad 0
 ]

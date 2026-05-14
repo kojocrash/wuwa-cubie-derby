@@ -1,7 +1,7 @@
 # Wuthering Waves — Cubie Derby Simulator
 
 A Python simulator for the Cubie Derby mini-game from Wuthering Waves (2026 edition).
-Models the full race engine including cube abilities, stacking mechanics, pad effects, and
+Models the full race engine including cube skills, stacking mechanics, pad effects, and
 Abbowser's chaos.
 
 ---
@@ -30,10 +30,10 @@ python simulation.py -n 10000
 
 ## Track layout
 
-The track is a loop of 32 pads numbered 0–31. Pad 0 doubles as both the start and the
-finish — normal cubes begin just past it at pad 1, race forward through 2, 3, … 31, and win
-by crossing pad 0 again. Abbowser starts at pad 0 and travels the loop in reverse
-(0 → 31 → 30 → …).
+The track is a loop of 32 pads numbered 0–31. Pad 0 is the finish line — the first cube
+to reach it wins. Starting positions vary by race format, and the game handles any edge
+cases around the finish line correctly regardless of where cubes begin. Cubes travel forward
+(1 → 2 → … → 31 → 0); Abbowser, the chaos wildcard, moves in reverse.
 
 Special pads along the way:
 
@@ -62,43 +62,19 @@ PARTICIPANTS: list = [
     (Jinhsi,    -2),   # 2 pads before the finish line
     (Augusta,   -1),   # 1 pad before the finish line
     (Changli,   -1),   # 1 pad before the finish line
-    Phrolova,          # no starting pad specified
+    Phrolova,          # no starting pad — defaults to pad 0
 ]
 ```
 
 Each participant is either just a cube class, or a `(cube class, starting pad)` pair.
-If **none** of the participants have a starting pad, the program treats this as a first-half
-race and places everyone at pad 1. Otherwise starting pads are used as given — negative
-values wrap naturally around the track (e.g. `-1` is the pad just before the finish line,
-`-2` is two pads before it, and so on). A participant without a pad in a mixed list defaults
-to pad 0.
+If none of them have a starting pad explicitly defined, the program treats this as a
+first-half race and places everyone at pad 1. Otherwise starting pads are used as given —
+negative values wrap naturally around the track (e.g. `-1` is the pad just before the
+finish line, `-2` is two pads before it, and so on). Leaving out a starting pad defaults
+to pad 0, except in a first-half race where everyone starts at pad 1 instead.
 
 When multiple cubes share a starting pad, list order determines the stack —
 first listed ends up at the bottom, last listed at the top.
-
----
-
-## Cube abilities
-
-Skill descriptions for every cube are available in all supported languages in
-[kojocrash/wuwa-cubie-info](https://github.com/kojocrash/wuwa-cubie-info/blob/main/output/3.3/skill_desc.json).
-
----
-
-## Abbowser
-
-Abbowser is placed automatically at pad 0 at the start of every race — he is not listed in
-`PARTICIPANTS`. He plays differently from every other cube:
-
-- **Sits out the first two rounds** before joining the race.
-- **Travels backward** around the track, rolling 1–6 each turn like everyone else.
-- **Always at the bottom.** Whenever he moves onto a pad with other cubes, he sinks to the
-  bottom of that stack. Cubes he picks up along the way travel with him until they take
-  their own turn and walk off.
-- **Sets cubes back.** If he drags cubes backward past the finish line (pad 0), each of
-  those cubes owes an extra lap.
-- **Warps home.** At the end of any round where he is alone and every other cube has already
-  passed his position going forward, he teleports back to pad 0.
 
 ---
 
@@ -131,6 +107,14 @@ engine/
 
 ---
 
+## Cube skills
+
+Each cube's skill is modeled closely to its in-game behavior. The skill descriptions
+pulled directly from the game in all supported languages are available at
+[kojocrash/wuwa-cubie-info](https://github.com/kojocrash/wuwa-cubie-info/blob/main/output/3.3/skill_desc.json).
+
+---
+
 ## Adding a new cube
 
 1. Create `cubes/<name>.py` with a class that extends `CubeBase`.
@@ -143,7 +127,7 @@ engine/
 
 ## Effect system
 
-Every cube ability is an `Effect` subclass. An effect declares which **phase** it listens to,
+Every cube skill is an `Effect` subclass. An effect declares which **phase** it listens to,
 and the engine calls it automatically at the right moment each turn or round.
 
 ### Phases
@@ -201,9 +185,10 @@ class _MyEffect(Effect):
 
 ### Priority
 
-The third argument to `super().__init__` is an optional `priority` (default `0`). Lower
-values fire first within the same phase. Use negative numbers to guarantee firing before
-other effects at the same phase, or higher numbers to fire after them.
+The third argument to `super().__init__` is an optional `priority` (default `0`). Higher
+values fire first within the same phase. Use this when two effects at the same phase have
+an ordering dependency — for example, an effect that needs to read a clean stack before
+another effect shuffles it.
 
 ---
 
@@ -213,9 +198,9 @@ Tags are lightweight string labels attached to individual cubes. They are the st
 to implement once-per-match guards, multi-round state, and any other per-cube flags.
 
 ```python
-cube.add_tag("my_effect.fired")          # attach a tag (optionally with a context dict)
-cube.has_tag("my_effect.fired", exact=True)  # check for it
-cube.remove_tags("my_effect.fired", exact=True)  # clear it
+cube.add_tag("my_effect.fired")                      # attach a tag (optionally with a context dict)
+cube.has_tag("my_effect.fired", exact=True)          # check for it
+cube.remove_tags("my_effect.fired", exact=True)      # clear it
 ```
 
 The `exact` parameter controls name matching. Without it, `has_tag("foo")` also matches tags
