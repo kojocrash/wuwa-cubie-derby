@@ -64,8 +64,10 @@ When multiple cubes share a starting pad, **stacking order follows list order**
 
 ## Track layout
 
-The track has **32 pads** numbered 0–31. Normal cubes travel **forward** (1 → 2 → … → 31 → 0).
-Pad 0 is the finish line. Abbowser travels **backward** (0 → 31 → 30 → …).
+The track is a loop of **32 pads** numbered 0–31. Pad 0 doubles as both the start and the
+finish — normal cubes begin just past it at pad 1, race forward through 2, 3, … 31, and win
+by crossing pad 0 again. Abbowser starts at pad 0 and travels the loop in reverse
+(0 → 31 → 30 → …).
 
 | Pad | Type |
 |---|---|
