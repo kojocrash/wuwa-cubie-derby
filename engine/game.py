@@ -208,6 +208,10 @@ class Game:
             base = TRACK_SIZE
         return base + (cube.laps_needed - 1) * TRACK_SIZE
 
+    def get_adjusted_position(self, cube: CubeBase) -> int:
+        """Pads effectively traveled. Higher = closer to winning. Complement of adjusted_distance."""
+        return TRACK_SIZE - self.get_adjusted_distance(cube)
+
     def get_ranking(self) -> list[CubeBase]:
         """Non-Abbowser cubes sorted best → worst."""
         def sort_key(cube: CubeBase):

@@ -19,7 +19,8 @@ class _FloatToTop(Effect):
 
     def can_trigger(self, ctx: TurnEndContext) -> bool:
         return (
-            ctx.active_cube.position == self.owner.position
+            ctx.active_cube is not self.owner
+            and ctx.active_cube.position == self.owner.position
             and self.owner.above is not None
         )
 

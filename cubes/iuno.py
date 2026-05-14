@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import ClassVar
 
 from engine.cube_base import CubeBase
-from engine.effect_system import Effect, Phase, TurnEndContext
+from engine.effect_system import Effect, Phase, PreMoveContext
 from engine.track import TRACK_SIZE
 
 _MIDPOINT_PAD = TRACK_SIZE // 2
@@ -12,33 +12,32 @@ _TAG = "iuno.gather"
 
 class _GatherAtMidpoint(Effect):
     """
-    At TURN_END, the first time Iuno is at or past the midpoint with at least one
-    non-Abbowser cube ahead, all non-Abbowser cubes are teleported to Iuno's pad
-    and restacked by ranking: last place at the bottom, first place at the top.
+    At PRE_MOVE, the first time Iuno is strictly past the midpoint with at least one
+    non-Abbowser cube ahead AND at least one behind her in the rankings, all
+    non-Abbowser cubes are teleported to Iuno's pad and restacked by ranking:
+    last place at the bottom, first place at the top.
     Abbowser (if present at that pad) stays below everyone.
 
-    If no cube is ahead when Iuno crosses, the effect is held and retried each
-    subsequent TURN_END until a valid target exists.  Triggers once per match.
+    If no cube is ahead/behind when Iuno crosses, the effect is held and retried each
+    subsequent PRE_MOVE until a valid state exists.  Triggers once per match.
     """
 
     def __init__(self, owner: CubeBase) -> None:
-        super().__init__(owner, Phase.TURN_END)
+        super().__init__(owner, Phase.PRE_MOVE)
 
-    def can_trigger(self, ctx: TurnEndContext) -> bool:
+    def can_trigger(self, ctx: PreMoveContext) -> bool:
         iuno = self.owner
         if ctx.active_cube is not iuno:
             return False
-        if iuno.position < _MIDPOINT_PAD:
+        if ctx.game.get_adjusted_position(iuno) <= _MIDPOINT_PAD:
             return False
         if iuno.has_tag(_TAG, exact=True):
             return False
-        return any(
-            c.position > iuno.position
-            for c in ctx.game.cubes
-            if not c.is_abbowser and c is not iuno
-        )
+        ranking = ctx.game.get_ranking()
+        iuno_idx = ranking.index(iuno)
+        return 0 < iuno_idx < len(ranking) - 1  # someone ahead AND behind
 
-    def apply(self, ctx: TurnEndContext) -> None:
+    def apply(self, ctx: PreMoveContext) -> None:
         iuno = self.owner
         game = ctx.game
         target_pad = iuno.position

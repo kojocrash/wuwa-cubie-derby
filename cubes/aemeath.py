@@ -25,23 +25,25 @@ class _MidpointTeleport(Effect):
     def can_trigger(self, ctx: TurnEndContext) -> bool:
         return (
             ctx.active_cube is self.owner
-            and self.owner.position >= _MIDPOINT_PAD
+            and ctx.game.get_adjusted_position(self.owner) > _MIDPOINT_PAD
             and not self.owner.has_tag(_TAG, exact=True)
         )
 
     def apply(self, ctx: TurnEndContext) -> None:
         aemeath = self.owner
         game = ctx.game
+        aemeath_adj = game.get_adjusted_position(aemeath)
 
         candidates = [
             c for c in game.cubes
-            if not c.is_abbowser and c is not aemeath and c.position > aemeath.position
+            if not c.is_abbowser and c is not aemeath
+            and game.get_adjusted_position(c) > aemeath_adj
         ]
         if not candidates:
             return  # no one ahead — hold the teleport for a later turn
 
-        closest_pad = min(c.position for c in candidates)
-        target = next(c for c in candidates if c.position == closest_pad)
+        closest_adj = min(game.get_adjusted_position(c) for c in candidates)
+        target = next(c for c in candidates if game.get_adjusted_position(c) == closest_adj)
 
         aemeath.add_tag(_TAG)
         aemeath.attach_above(target, game)
