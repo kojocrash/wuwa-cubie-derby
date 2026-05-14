@@ -12,7 +12,7 @@ Mix of tuple and bare-class entries is allowed; if ANY pad is specified the
 whole race runs in second-half mode and bare classes default to pad 0.
 """
 
-from cubes import Augusta, Calcharo, Changli, Iuno, Jinhsi, Phrolova
+from cubes import *
 
 PARTICIPANTS: list = [
     (Iuno,      -3),
