@@ -186,7 +186,8 @@ class Game:
             for cube, pad in participants:
                 actual = (pad % TRACK_SIZE) if pad is not None else 0
                 cube.position = actual
-                cube.laps_needed = 1
+                is_starting_behind = (pad is not None and pad < 0) or actual > TRACK_SIZE // 4  # quarter-track threshold is arbitrary
+                cube.laps_needed = 2 if is_starting_behind else 1
                 self._append_to_top(cube, actual)
             self._first_half = False
 
