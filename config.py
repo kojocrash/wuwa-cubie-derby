@@ -15,10 +15,10 @@ whole race runs in second-half mode and bare classes default to pad 0.
 from cubes import *
 
 PARTICIPANTS: list = [
-    (Iuno,      -3),
-    (Calcharo,  -2),
-    (Jinhsi,    -2),
-    (Augusta,   -1),
-    (Changli,   -1),
-    Phrolova,          # no starting pad — defaults to pad 0
+    Luuk,
+    Cartethyia,
+    Chisa,
+    Mornye,
+    Iuno,
+    Augusta
 ]
