@@ -10,7 +10,7 @@ class _LastPlaceBonus(Effect):
     """If Calcharo is in last place when his turn starts, +3 moves."""
 
     def __init__(self, owner: CubeBase) -> None:
-        super().__init__(owner, Phase.PRE_MOVE)
+        super().__init__(owner, Phase.PRE_MOVE, priority=10)
 
     def can_trigger(self, ctx: PreMoveContext) -> bool:
         return (

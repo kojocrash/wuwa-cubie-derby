@@ -10,7 +10,7 @@ class _BottomStackBonus(Effect):
     """When Phrolova is at the bottom of a stack with at least one cube above, +3 moves."""
 
     def __init__(self, owner: CubeBase) -> None:
-        super().__init__(owner, Phase.PRE_MOVE)
+        super().__init__(owner, Phase.PRE_MOVE, priority=10)
 
     def can_trigger(self, ctx: PreMoveContext) -> bool:
         return (

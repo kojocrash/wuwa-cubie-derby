@@ -23,7 +23,7 @@ class _GatherAtMidpoint(Effect):
     """
 
     def __init__(self, owner: CubeBase) -> None:
-        super().__init__(owner, Phase.PRE_MOVE)
+        super().__init__(owner, Phase.PRE_MOVE, priority=5)
 
     def can_trigger(self, ctx: PreMoveContext) -> bool:
         iuno = self.owner
