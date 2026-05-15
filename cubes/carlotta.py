@@ -4,21 +4,21 @@ import random
 from typing import ClassVar
 
 from engine.cube_base import CubeBase
-from engine.effect_system import Effect, Phase, RollContext
+from engine.effect_system import Effect, Phase, PreMoveContext
 
 
 class _DoubleAdvance(Effect):
     """28% chance to double the rolled number (one move of 2×roll pads)."""
 
     def __init__(self, owner: CubeBase) -> None:
-        super().__init__(owner, Phase.ROLL_POST)
+        super().__init__(owner, Phase.PRE_MOVE, priority=10)
 
-    def can_trigger(self, ctx: RollContext) -> bool:
-        return self.owner in ctx.rolls
+    def can_trigger(self, ctx: PreMoveContext) -> bool:
+        return ctx.active_cube is self.owner
 
-    def apply(self, ctx: RollContext) -> None:
+    def apply(self, ctx: PreMoveContext) -> None:
         if random.random() < 0.28:
-            ctx.rolls[self.owner] *= 2
+            ctx.move_count *= 2
 
 
 class Carlotta(CubeBase):
