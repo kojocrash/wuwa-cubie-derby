@@ -237,6 +237,12 @@ class Game:
 
     def run_game(self) -> list[CubeBase]:
         """Run until someone finishes. Returns ranking best → worst (no Abbowser)."""
+        if not self.race_finished and not self._first_half and self.round_number == 0:
+            # Seems like ROUND_END effects can trigger at the very beginning of non-1st-half races (Changli on 2026 Preliminary C 2nd-half NA server)
+            #   might need more research but this is closest hypothesis
+            ctx = RoundEndContext(game=self)
+            self._trigger_phase_effects(Phase.ROUND_END, ctx)
+
         while not self.race_finished:
             self.round_number += 1
 
