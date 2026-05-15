@@ -28,6 +28,28 @@ python simulation.py -n 10000
 
 ---
 
+## Example output
+
+#### `> python simulation.py`
+
+```
+Running 2,000 simulations…
+
+Cubie Derby Race Simulation  (2,000 runs)
+────────────────────────────────────────────
+  Cube              Win %    Avg Rank
+  ──────────────  ───────    ────────
+  Jinhsi           36.15%       2.857
+  Calcharo         15.10%       3.372
+  Changli          14.75%       3.575
+  Augusta          14.20%       3.487
+  Phrolova         12.00%       3.313
+  Iuno              7.80%       4.396
+────────────────────────────────────────────
+```
+
+---
+
 ## Track layout
 
 The track is a loop of 32 pads numbered 0–31. Pad 0 is the finish line — the first cube
