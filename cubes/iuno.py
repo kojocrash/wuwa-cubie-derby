@@ -31,7 +31,7 @@ class _GatherAtMidpoint(Effect):
             return False
         if ctx.game.get_adjusted_position(iuno) <= _MIDPOINT_PAD:
             return False
-        if iuno.has_tag(_TAG, exact=True):
+        if iuno.has_tag(_TAG):
             return False
         ranking = ctx.game.get_ranking()
         iuno_idx = ranking.index(iuno)

@@ -26,7 +26,7 @@ class _MidpointTeleport(Effect):
         return (
             ctx.active_cube is self.owner
             and ctx.game.get_adjusted_position(self.owner) > _MIDPOINT_PAD
-            and not self.owner.has_tag(_TAG, exact=True)
+            and not self.owner.has_tag(_TAG)
         )
 
     def apply(self, ctx: TurnEndContext) -> None:

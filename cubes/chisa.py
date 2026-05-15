@@ -5,6 +5,7 @@ from typing import ClassVar
 from engine.cube_base import CubeBase
 from engine.effect_system import Effect, Phase, RollContext, PreMoveContext, RoundEndContext
 
+_TAG = "chisa.low_roll_bonus"
 
 class _LowRollCheck(Effect):
     """During the batch roll phase, tag Chisa if her base roll is ≤ all others'."""
@@ -18,7 +19,7 @@ class _LowRollCheck(Effect):
     def apply(self, ctx: RollContext) -> None:
         others = [v for k, v in ctx.rolls.items() if k is not self.owner]
         if not others or ctx.rolls[self.owner] <= min(others):
-            self.owner.add_tag("chisa.low_roll_bonus")
+            self.owner.add_tag(_TAG)
 
 
 class _LowRollBonus(Effect):
@@ -30,11 +31,11 @@ class _LowRollBonus(Effect):
     def can_trigger(self, ctx: PreMoveContext) -> bool:
         return (
             ctx.active_cube is self.owner
-            and self.owner.has_tag("chisa.low_roll_bonus", exact=True)
+            and self.owner.has_tag(_TAG)
         )
 
     def apply(self, ctx: PreMoveContext) -> None:
-        self.owner.remove_tags("chisa.low_roll_bonus", exact=True)
+        self.owner.remove_tags(_TAG)
         ctx.move_count += 2
 
 class _LowRollEffectCleanup(Effect):
@@ -44,10 +45,10 @@ class _LowRollEffectCleanup(Effect):
         super().__init__(owner, Phase.ROUND_END)
 
     def can_trigger(self, ctx: RoundEndContext) -> bool:
-        return self.owner.has_tag("chisa")
+        return self.owner.has_tag("chisa", exact=False)
 
     def apply(self, ctx: RoundEndContext) -> None:
-        self.owner.remove_tags("chisa")
+        self.owner.remove_tags("chisa", exact=False)
 
 class Chisa(CubeBase):
     """If this turn's roll is the lowest among all Cubes, advance 2 extra pads."""

@@ -19,13 +19,13 @@ class TagMixin:
         self._tags.append(tag)
         return tag
 
-    def remove_tags(self, name: str, exact: bool = False) -> None:
+    def remove_tags(self, name: str, exact: bool = True) -> None:
         self._tags = [t for t in self._tags if not _name_matches(t.name, name, exact)]
 
     def has_tag(
         self,
         name: str,
-        exact: bool = False,
+        exact: bool = True,
         predicate: Optional[Callable[[dict], bool]] = None,
     ) -> bool:
         # TODO: wildcard support (* and ** glob-style matching)
@@ -37,7 +37,7 @@ class TagMixin:
     def get_tags(
         self,
         name: str,
-        exact: bool = False,
+        exact: bool = True,
         predicate: Optional[Callable[[dict], bool]] = None,
     ) -> list[Tag]:
         return [

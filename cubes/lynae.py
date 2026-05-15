@@ -6,6 +6,8 @@ from typing import ClassVar
 from engine.cube_base import CubeBase
 from engine.effect_system import Effect, Phase, RollContext, PreMoveContext, RoundEndContext
 
+_NO_MOVEMENT_TAG = "lynae.still"
+_DOUBLE_MOVEMENT_TAG = "lynae.double"
 
 class _LynaeRollCheck(Effect):
     """During the batch roll phase, tag Lynae with her outcome for this round."""
@@ -19,9 +21,9 @@ class _LynaeRollCheck(Effect):
     def apply(self, ctx: RollContext) -> None:
         r = random.random()
         if r < 0.20:
-            self.owner.add_tag("lynae.still")
+            self.owner.add_tag(_NO_MOVEMENT_TAG)
         elif r < 0.80:
-            self.owner.add_tag("lynae.double")
+            self.owner.add_tag(_DOUBLE_MOVEMENT_TAG)
         # else: 20% — no tag, normal roll
 
 
@@ -33,16 +35,16 @@ class _LynaeRollApply(Effect):
 
     def can_trigger(self, ctx: PreMoveContext) -> bool:
         return ctx.active_cube is self.owner and (
-            self.owner.has_tag("lynae.still", exact=True)
-            or self.owner.has_tag("lynae.double", exact=True)
+            self.owner.has_tag(_NO_MOVEMENT_TAG)
+            or self.owner.has_tag(_DOUBLE_MOVEMENT_TAG)
         )
 
     def apply(self, ctx: PreMoveContext) -> None:
-        if self.owner.has_tag("lynae.still", exact=True):
-            self.owner.remove_tags("lynae.still", exact=True)
+        if self.owner.has_tag(_NO_MOVEMENT_TAG):
+            self.owner.remove_tags(_NO_MOVEMENT_TAG)
             ctx.move_count = 0
-        elif self.owner.has_tag("lynae.double", exact=True):
-            self.owner.remove_tags("lynae.double", exact=True)
+        elif self.owner.has_tag(_DOUBLE_MOVEMENT_TAG):
+            self.owner.remove_tags(_DOUBLE_MOVEMENT_TAG)
             ctx.move_count *= 2
 
 class _LynaeRollEffectCleanup(Effect):
@@ -52,10 +54,10 @@ class _LynaeRollEffectCleanup(Effect):
         super().__init__(owner, Phase.ROUND_END)
 
     def can_trigger(self, ctx: RoundEndContext) -> bool:
-        return self.owner.has_tag("lynae")
+        return self.owner.has_tag("lynae", exact=False)
 
     def apply(self, ctx: RoundEndContext) -> None:
-        self.owner.remove_tags("lynae")
+        self.owner.remove_tags("lynae", exact=False)
 
 class Lynae(CubeBase):
     """60% chance to double the roll; 20% chance to stay still; 20% normal."""

@@ -199,11 +199,11 @@ to implement once-per-match guards, multi-round state, and any other per-cube fl
 
 ```python
 cube.add_tag("my_effect.fired")                      # attach a tag (optionally with a context dict)
-cube.has_tag("my_effect.fired", exact=True)          # check for it
-cube.remove_tags("my_effect.fired", exact=True)      # clear it
+cube.has_tag("my_effect.fired")                      # check for it
+cube.remove_tags("my_effect.fired")                  # clear it
 ```
 
-The `exact` parameter controls name matching. Without it, `has_tag("foo")` also matches tags
+The `exact` parameter controls name matching. When false, `has_tag("foo", exact=False)` also matches tags
 named `"foo.bar"`, `"foo.baz"`, etc., which is useful for grouping related tags under a
 common prefix.
 

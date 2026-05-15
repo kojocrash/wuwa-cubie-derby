@@ -33,13 +33,13 @@ class _GoLastNextRound(Effect):
         super().__init__(owner, Phase.TURN_ORDER, priority=10)
 
     def can_trigger(self, ctx: TurnOrderContext) -> bool:
-        return self.owner.has_tag(_TAG, exact=True)
+        return self.owner.has_tag(_TAG)
 
     def apply(self, ctx: TurnOrderContext) -> None:
         if self.owner in ctx.turn_order:
             ctx.turn_order.remove(self.owner)
             ctx.turn_order.append(self.owner)
-        self.owner.remove_tags(_TAG, exact=True)
+        self.owner.remove_tags(_TAG)
 
 
 class Changli(CubeBase):
