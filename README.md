@@ -137,7 +137,7 @@ Phases fire in this order within a turn (round-level phases are noted separately
 | Phase | When |
 |---|---|
 | `TURN_ORDER` | Once per round, before anyone moves — effects can reorder the turn list |
-| `ROLL_POST` | After a cube rolls its dice — effects can modify the roll value |
+| `ROLL_POST` | Once per round, during the batch roll phase — all dice are rolled first, then ROLL_POST fires for each cube before any turns begin; effects can modify the roll value |
 | `PRE_MOVE` | Before a cube's movement begins — effects can change the number of pads to move |
 | `MOVE_PRE` | Before each individual pad step — effects can cancel or redirect a step |
 | `MOVE_POST` | After each individual pad step — effects can adjust remaining pads or react to position |
@@ -155,7 +155,7 @@ to write to — everything else is read-only.
 | Context | Key fields | Mutable |
 |---|---|---|
 | `TurnOrderContext` | `turn_order` | `turn_order` |
-| `RollContext` | `roll` | `roll` |
+| `RollContext` | `cube`, `roll` | `roll` |
 | `PreMoveContext` | `roll`, `move_count` | `move_count` |
 | `MovePreContext` | `pads_remaining`, `stride` | `pads_remaining`, `stride`, `cancelled` |
 | `MovePostContext` | `pads_remaining`, `stride`, `is_pad_push` | `pads_remaining` |
@@ -165,7 +165,9 @@ to write to — everything else is read-only.
 | `RoundEndContext` | `game` | — |
 
 All contexts also carry `game` (the `Game` instance) and `active_cube` (the cube whose turn
-it is, or `None` for round-level phases).
+it is, or `None` for round-level phases). `RollContext` is an exception — since it fires
+during the batch roll phase before any individual turn begins, `active_cube` is `None`; use
+`ctx.cube` instead to identify which cube's roll is being modified.
 
 ### Writing an effect
 

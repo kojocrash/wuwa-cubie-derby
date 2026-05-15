@@ -40,7 +40,7 @@ class Game:
         self.cubes: list[CubeBase] = []
         self.pads: dict[int, CubeBase] = {}  # pad → bottom cube of stack (absent if empty)
         self.round_number: int = 0
-        self.round_rolls: dict[str, int] = {}
+        self.round_rolls: dict[CubeBase, int] = {}
         self.race_finished: bool = False
         self._first_half: bool = False
 
@@ -271,14 +271,30 @@ class Game:
             if self.verbose and self.round_number == 1:
                 self._vprint_board("INITIAL BOARD")
 
-            # --- Roll phase: pre-roll all dice before any turns execute ---
-            self.round_rolls = {cube.name: cube.base_roll() for cube in turn_order}
+            # --- Roll phase: pre-roll all dice, then fire ROLL_POST for each cube ---
+            base_rolls: dict[CubeBase, int] = {cube: cube.base_roll() for cube in turn_order}
+            # Populate round_rolls with base values so ROLL_POST effects (e.g. Chisa)
+            # can read other cubes' raw rolls during the batch phase.
+            self.round_rolls = dict(base_rolls)
+
+            modified_rolls: dict[CubeBase, int] = {}
+            for cube in turn_order:
+                ctx = RollContext(game=self, cube=cube, roll=base_rolls[cube])
+                self._trigger_phase_effects(Phase.ROLL_POST, ctx)
+                modified_rolls[cube] = ctx.roll
 
             if self.verbose:
-                rolls_str = "  ".join(
-                    f"{n}={r}" for n, r in self.round_rolls.items()
-                )
-                print(f"Rolls:      {rolls_str}")
+                parts = []
+                for cube in turn_order:
+                    base = base_rolls[cube]
+                    mod = modified_rolls[cube]
+                    parts.append(
+                        f"{cube.name}={base}" if base == mod
+                        else f"{cube.name}={base}→{mod}"
+                    )
+                print(f"Rolls:      {'  '.join(parts)}")
+
+            self.round_rolls = modified_rolls
 
             # --- Turn phase ---
             for cube in turn_order:
@@ -387,20 +403,15 @@ class Game:
         return moved
 
     def _execute_turn(self, cube: CubeBase) -> None:
-        raw_roll = self.round_rolls[cube.name]
-
-        # ROLL_POST: effects can modify the pre-rolled value
-        ctx = RollContext(game=self, active_cube=cube, roll=raw_roll)
-        self._trigger_phase_effects(Phase.ROLL_POST, ctx)
-        move_count = ctx.roll
+        roll = self.round_rolls[cube]
 
         # PRE_MOVE: effects can adjust how many moves will be made
-        ctx = PreMoveContext(game=self, active_cube=cube, roll=move_count, move_count=move_count)
+        ctx = PreMoveContext(game=self, active_cube=cube, roll=roll, move_count=roll)
         self._trigger_phase_effects(Phase.PRE_MOVE, ctx)
         move_count = ctx.move_count
 
         if self.verbose:
-            roll_str = str(raw_roll) if move_count == raw_roll else f"{raw_roll} → {move_count}"
+            roll_str = str(roll) if move_count == roll else f"{roll}→{move_count}"
             print(f"\n  [{cube.name}]  pad {cube.position}  roll={roll_str}  ({move_count} moves)")
 
         stride = -1 if cube.is_abbowser else 1

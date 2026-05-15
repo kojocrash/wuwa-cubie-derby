@@ -13,10 +13,10 @@ class _LowestRollBonus(Effect):
         super().__init__(owner, Phase.ROLL_POST)
 
     def can_trigger(self, ctx: RollContext) -> bool:
-        return ctx.active_cube is self.owner
+        return ctx.cube is self.owner
 
     def apply(self, ctx: RollContext) -> None:
-        others = [v for k, v in ctx.game.round_rolls.items() if k != self.owner.name]
+        others = [v for k, v in ctx.game.round_rolls.items() if k is not self.owner]
         if not others or ctx.roll <= min(others):
             ctx.roll += 2
 

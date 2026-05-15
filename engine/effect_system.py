@@ -42,6 +42,7 @@ class TurnOrderContext(EffectContext):
 @dataclass
 class RollContext(EffectContext):
     roll: int = 0                         # mutable
+    cube: CubeBase | None = None          # the cube being rolled (active_cube is None in batch phase)
 
 
 @dataclass
