@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import ClassVar
 
 from engine.cube_base import CubeBase
-from engine.effect_system import Effect, Phase, RollContext, PreMoveContext
+from engine.effect_system import Effect, Phase, RollContext, PreMoveContext, RoundEndContext
 
 
 class _LowRollCheck(Effect):
@@ -37,6 +37,17 @@ class _LowRollBonus(Effect):
         self.owner.remove_tags("chisa.low_roll_bonus", exact=True)
         ctx.move_count += 2
 
+class _LowRollEffectCleanup(Effect):
+    """As a safety net, removes lingering effect tags"""
+
+    def __init__(self, owner: CubeBase) -> None:
+        super().__init__(owner, Phase.ROUND_END)
+
+    def can_trigger(self, ctx: RoundEndContext) -> bool:
+        return self.owner.has_tag("chisa")
+
+    def apply(self, ctx: RoundEndContext) -> None:
+        self.owner.remove_tags("chisa")
 
 class Chisa(CubeBase):
     """If this turn's roll is the lowest among all Cubes, advance 2 extra pads."""
@@ -46,3 +57,4 @@ class Chisa(CubeBase):
     def _setup_effects(self) -> None:
         self._register(_LowRollCheck(self))
         self._register(_LowRollBonus(self))
+        self._register(_LowRollEffectCleanup(self))

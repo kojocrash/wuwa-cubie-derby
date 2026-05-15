@@ -4,7 +4,7 @@ import random
 from typing import ClassVar
 
 from engine.cube_base import CubeBase
-from engine.effect_system import Effect, Phase, RollContext, PreMoveContext
+from engine.effect_system import Effect, Phase, RollContext, PreMoveContext, RoundEndContext
 
 
 class _LynaeRollCheck(Effect):
@@ -45,6 +45,17 @@ class _LynaeRollApply(Effect):
             self.owner.remove_tags("lynae.double", exact=True)
             ctx.move_count *= 2
 
+class _LynaeRollEffectCleanup(Effect):
+    """As a safety net, removes lingering effect tags"""
+
+    def __init__(self, owner: CubeBase) -> None:
+        super().__init__(owner, Phase.ROUND_END)
+
+    def can_trigger(self, ctx: RoundEndContext) -> bool:
+        return self.owner.has_tag("lynae")
+
+    def apply(self, ctx: RoundEndContext) -> None:
+        self.owner.remove_tags("lynae")
 
 class Lynae(CubeBase):
     """60% chance to double the roll; 20% chance to stay still; 20% normal."""
@@ -54,3 +65,4 @@ class Lynae(CubeBase):
     def _setup_effects(self) -> None:
         self._register(_LynaeRollCheck(self))
         self._register(_LynaeRollApply(self))
+        self._register(_LynaeRollEffectCleanup(self))
