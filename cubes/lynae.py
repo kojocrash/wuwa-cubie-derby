@@ -19,14 +19,14 @@ class _LynaeRollModifier(Effect):
         super().__init__(owner, Phase.ROLL_POST)
 
     def can_trigger(self, ctx: RollContext) -> bool:
-        return ctx.cube is self.owner
+        return self.owner in ctx.rolls
 
     def apply(self, ctx: RollContext) -> None:
         r = random.random()
         if r < 0.20:
-            ctx.roll = 0
+            ctx.rolls[self.owner] = 0
         elif r < 0.80:
-            ctx.roll *= 2
+            ctx.rolls[self.owner] *= 2
         # else: 20% — keep as-is
 
 

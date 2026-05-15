@@ -14,11 +14,11 @@ class _DoubleAdvance(Effect):
         super().__init__(owner, Phase.ROLL_POST)
 
     def can_trigger(self, ctx: RollContext) -> bool:
-        return ctx.cube is self.owner
+        return self.owner in ctx.rolls
 
     def apply(self, ctx: RollContext) -> None:
         if random.random() < 0.28:
-            ctx.roll *= 2
+            ctx.rolls[self.owner] *= 2
 
 
 class Carlotta(CubeBase):

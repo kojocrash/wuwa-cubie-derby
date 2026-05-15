@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 class Phase(Enum):
     TURN_ORDER   = "turn_order"    # before each round: effects can reorder turn_order list
-    ROLL_POST    = "roll_post"     # after base_roll(); effects modify roll value
+    ROLL_POST    = "roll_post"     # once per round during batch roll phase; context carries all rolls
     PRE_MOVE     = "pre_move"      # before movement loop; effects can modify total_pads
     MOVE_PRE     = "move_pre"      # before each individual pad move
     MOVE_POST    = "move_post"     # after each individual pad move
@@ -41,8 +41,8 @@ class TurnOrderContext(EffectContext):
 
 @dataclass
 class RollContext(EffectContext):
-    roll: int = 0                         # mutable
-    cube: CubeBase | None = None          # the cube being rolled (active_cube is None in batch phase)
+    rolls: dict = field(default_factory=dict)       # mutable: cube → current roll value
+    _base_rolls: dict = field(default_factory=dict) # read-only by convention: cube → original roll
 
 
 @dataclass

@@ -155,7 +155,7 @@ to write to — everything else is read-only.
 | Context | Key fields | Mutable |
 |---|---|---|
 | `TurnOrderContext` | `turn_order` | `turn_order` |
-| `RollContext` | `cube`, `roll` | `roll` |
+| `RollContext` | `rolls`, `_base_rolls` | `rolls` |
 | `PreMoveContext` | `roll`, `move_count` | `move_count` |
 | `MovePreContext` | `pads_remaining`, `stride` | `pads_remaining`, `stride`, `cancelled` |
 | `MovePostContext` | `pads_remaining`, `stride`, `is_pad_push` | `pads_remaining` |
@@ -165,9 +165,9 @@ to write to — everything else is read-only.
 | `RoundEndContext` | `game` | — |
 
 All contexts also carry `game` (the `Game` instance) and `active_cube` (the cube whose turn
-it is, or `None` for round-level phases). `RollContext` is an exception — since it fires
-during the batch roll phase before any individual turn begins, `active_cube` is `None`; use
-`ctx.cube` instead to identify which cube's roll is being modified.
+it is, or `None` for round-level phases). `RollContext` is a round-level phase — `active_cube`
+is `None`. Effects read `ctx._base_rolls[self.owner]` for the original value and write to
+`ctx.rolls[self.owner]` to modify it.
 
 ### Writing an effect
 

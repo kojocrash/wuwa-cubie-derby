@@ -13,12 +13,12 @@ class _LowestRollBonus(Effect):
         super().__init__(owner, Phase.ROLL_POST)
 
     def can_trigger(self, ctx: RollContext) -> bool:
-        return ctx.cube is self.owner
+        return self.owner in ctx.rolls
 
     def apply(self, ctx: RollContext) -> None:
-        others = [v for k, v in ctx.game.round_rolls.items() if k is not self.owner]
-        if not others or ctx.roll <= min(others):
-            ctx.roll += 2
+        others = [v for k, v in ctx._base_rolls.items() if k is not self.owner]
+        if not others or ctx._base_rolls[self.owner] <= min(others):
+            ctx.rolls[self.owner] += 2
 
 
 class Chisa(CubeBase):

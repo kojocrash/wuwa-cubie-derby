@@ -271,30 +271,22 @@ class Game:
             if self.verbose and self.round_number == 1:
                 self._vprint_board("INITIAL BOARD")
 
-            # --- Roll phase: pre-roll all dice, then fire ROLL_POST for each cube ---
+            # --- Roll phase: pre-roll all dice, then fire ROLL_POST once for the round ---
             base_rolls: dict[CubeBase, int] = {cube: cube.base_roll() for cube in turn_order}
-            # Populate round_rolls with base values so ROLL_POST effects (e.g. Chisa)
-            # can read other cubes' raw rolls during the batch phase.
-            self.round_rolls = dict(base_rolls)
-
-            modified_rolls: dict[CubeBase, int] = {}
-            for cube in turn_order:
-                ctx = RollContext(game=self, cube=cube, roll=base_rolls[cube])
-                self._trigger_phase_effects(Phase.ROLL_POST, ctx)
-                modified_rolls[cube] = ctx.roll
+            ctx = RollContext(game=self, rolls=dict(base_rolls), _base_rolls=base_rolls)
+            self._trigger_phase_effects(Phase.ROLL_POST, ctx)
+            self.round_rolls = ctx.rolls
 
             if self.verbose:
                 parts = []
                 for cube in turn_order:
                     base = base_rolls[cube]
-                    mod = modified_rolls[cube]
+                    mod = self.round_rolls[cube]
                     parts.append(
                         f"{cube.name}={base}" if base == mod
                         else f"{cube.name}={base}→{mod}"
                     )
                 print(f"Rolls:      {'  '.join(parts)}")
-
-            self.round_rolls = modified_rolls
 
             # --- Turn phase ---
             for cube in turn_order:
