@@ -16,8 +16,8 @@ class _LowRollCheck(Effect):
         return self.owner in ctx.rolls
 
     def apply(self, ctx: RollContext) -> None:
-        others = [v for k, v in ctx._base_rolls.items() if k is not self.owner]
-        if not others or ctx._base_rolls[self.owner] <= min(others):
+        others = [v for k, v in ctx.rolls.items() if k is not self.owner]
+        if not others or ctx.rolls[self.owner] <= min(others):
             self.owner.add_tag("chisa.low_roll_bonus")
 
 
