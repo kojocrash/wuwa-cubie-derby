@@ -165,9 +165,7 @@ to write to — everything else is read-only.
 | `RoundEndContext` | `game` | — |
 
 All contexts also carry `game` (the `Game` instance) and `active_cube` (the cube whose turn
-it is, or `None` for round-level phases). `RollContext` is a round-level phase — `active_cube`
-is `None`. Effects read `ctx._base_rolls[self.owner]` for the original value and write to
-`ctx.rolls[self.owner]` to modify it.
+it is, or `None` for round-level phases).
 
 ### Writing an effect
 

@@ -41,8 +41,8 @@ class TurnOrderContext(EffectContext):
 
 @dataclass
 class RollContext(EffectContext):
-    rolls: dict = field(default_factory=dict)       # mutable: cube → current roll value
-    _base_rolls: dict = field(default_factory=dict) # read-only by convention: cube → original roll
+    rolls: dict[CubeBase, int] = field(default_factory=dict)        # mutable: this round's roll for every cube
+    _base_rolls: dict[CubeBase, int] = field(default_factory=dict)  # read-only by convention: raw dice values before any effects
 
 
 @dataclass
