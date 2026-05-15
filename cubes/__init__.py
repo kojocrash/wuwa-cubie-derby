@@ -11,3 +11,6 @@ from .lynae import Lynae
 from .mornye import Mornye
 from .phrolova import Phrolova
 from .shorekeeper import Shorekeeper
+from .sigrika import Sigrika
+from .luuk import Luuk
+from .cartethyia import Cartethyia
