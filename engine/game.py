@@ -199,7 +199,11 @@ class Game:
         return [c for c in self.cubes if not c.is_abbowser]
 
     def get_adjusted_distance(self, cube: CubeBase) -> int:
-        """Pads remaining until cube wins. Lower = closer to winning. AB returns a sentinel."""
+        """
+        Pads remaining until cube wins. Lower = closer to winning.
+        
+        **Do not use for Abbowser!** Abbowser will return a sentinel value (10,000).
+        """
         if cube.is_abbowser:
             return 10_000
         if cube.laps_needed == 0:
@@ -210,7 +214,19 @@ class Game:
         return base + (cube.laps_needed - 1) * TRACK_SIZE
 
     def get_adjusted_position(self, cube: CubeBase) -> int:
-        """Pads effectively traveled. Higher = closer to winning. Complement of adjusted_distance."""
+        """
+        Calculates how far the cube has effectively traveled. Used in place
+        of `cube.position` when comparing two cubes' progress
+        
+        Correctly handles cubes that start/move
+        behind the finish line (giving it a negative position).
+        
+        **Do not use for Abbowser!** Abbowser will just return his position unadjusted since he has no sense of progress.
+        """
+        
+        if cube.is_abbowser:
+            return cube.position
+        
         return TRACK_SIZE - self.get_adjusted_distance(cube)
 
     def get_ranking(self) -> list[CubeBase]:
