@@ -13,6 +13,7 @@ from .jinhsi        import Jinhsi
 from .luuk          import Luuk
 from .lynae         import Lynae
 from .mornye        import Mornye
+from .phoebe        import Phoebe
 from .phrolova      import Phrolova
 from .shorekeeper   import Shorekeeper
 from .sigrika       import Sigrika
