@@ -15,10 +15,10 @@ whole race runs in second-half mode and bare classes default to pad 0.
 from cubes import *
 
 PARTICIPANTS: list = [
-    Jinhsi,
-    Hiyuki,
-    Denia,
-    Shorekeeper,
-    Changli,
-    Sigrika
+    Phoebe,
+    Carlotta,
+    Aemeath,
+    Lynae,
+    Calcharo,
+    Phrolova
 ]
