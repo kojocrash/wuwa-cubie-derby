@@ -12,38 +12,43 @@ _TAG = "aemeath.midpoint"
 
 class _MidpointTeleport(Effect):
     """
-    At the end of the turn Aemeath first crosses the midpoint (TRACK_SIZE // 2),
-    she teleports to the top of the stack on the closest pad strictly ahead of her
-    (higher pad number).  If no cube occupies a pad ahead, the teleport is held
-    over and retried each subsequent TURN_END until one is available.
-    Triggers once per match.
+    Checks if Aemeath has passed the midpoint and a non-Abbowser cube
+    exists ahead by pad position. If so, teleports her to the top of
+    the nearest stack ahead. Triggers at most once per match.
     """
 
     def __init__(self, owner: CubeBase) -> None:
         super().__init__(owner, Phase.TURN_END)
 
     def can_trigger(self, ctx: TurnEndContext) -> bool:
+        aemeath_pos = ctx.game.get_adjusted_position(self.owner)
+
         return (
             ctx.active_cube is self.owner
-            and ctx.game.get_adjusted_position(self.owner) > _MIDPOINT_PAD
+            and aemeath_pos > _MIDPOINT_PAD
             and not self.owner.has_tag(_TAG)
+            and any(
+                ctx.game.get_adjusted_position(c) > aemeath_pos
+                for c in ctx.game.cubes 
+                if not c.is_abbowser and c is not self.owner
+            )
         )
 
     def apply(self, ctx: TurnEndContext) -> None:
-        aemeath = self.owner
         game = ctx.game
-        aemeath_adj = game.get_adjusted_position(aemeath)
+        aemeath = self.owner
+        aemeath_pos = game.get_adjusted_position(aemeath)
 
         candidates = [
             c for c in game.cubes
             if not c.is_abbowser and c is not aemeath
-            and game.get_adjusted_position(c) > aemeath_adj
+            and game.get_adjusted_position(c) > aemeath_pos
         ]
-        if not candidates:
-            return  # no one ahead — hold the teleport for a later turn
 
-        closest_adj = min(game.get_adjusted_position(c) for c in candidates)
-        target = next(c for c in candidates if game.get_adjusted_position(c) == closest_adj)
+        if not candidates:
+            return  # no one ahead — hold the teleport for a later turn (update: can_trigger should make this impossible now)
+
+        target = min(candidates, key=game.get_adjusted_position)
 
         aemeath.add_tag(_TAG)
         aemeath.attach_above(target, game)
@@ -51,9 +56,9 @@ class _MidpointTeleport(Effect):
 
 class Aemeath(CubeBase):
     """
-    Teleports to the top of the closest stack ahead of her the first time she crosses
-    the midpoint (TRACK_SIZE // 2).  If no cube is ahead, the teleport is held until
-    one is.  Triggers once per match at TURN_END.
+    After passing the midpoint, if a non-Abbowser cube exists ahead (pad
+    position, not ranking), teleports to the top of the nearest stack ahead.
+    Can only trigger once per match.
     """
 
     CUBE_TYPE: ClassVar[str] = "Aemeath"
