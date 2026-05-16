@@ -281,7 +281,6 @@ class Game:
             # (first mover on top so each cube's first move is independent)
             if self._first_half and self.round_number == 1:
                 self._set_stack(1, list(reversed(turn_order)))
-                self._first_half = False
 
             # Print initial board after any round-1 stack setup so what's shown is accurate
             if self.verbose and self.round_number == 1:
