@@ -3,29 +3,24 @@ from __future__ import annotations
 from typing import ClassVar
 
 from engine.cube_base import CubeBase
-from engine.effect_system import Effect, Phase, PreMoveContext
+from engine.effect_system import Effect, Phase, TurnEndContext
 from engine.track import TRACK_SIZE
 
 _MIDPOINT_PAD = TRACK_SIZE // 2
 _TAG = "iuno.gather"
 
-
 class _GatherAtMidpoint(Effect):
     """
-    At PRE_MOVE, the first time Iuno is strictly past the midpoint with at least one
-    non-Abbowser cube ahead AND at least one behind her in the rankings, all
-    non-Abbowser cubes are teleported to Iuno's pad and restacked by ranking:
-    last place at the bottom, first place at the top.
-    Abbowser (if present at that pad) stays below everyone.
-
-    If no cube is ahead/behind when Iuno crosses, the effect is held and retried each
-    subsequent PRE_MOVE until a valid state exists.  Triggers once per match.
+    Checks if Iuno has passed the midpoint and non-Abbowser cubes exist
+    both ahead and behind her in ranking. If so, teleports all of them
+    to her pad, stacking in their pre-teleport ranking order (last place → bottom, first place → top).
+    Triggers at most once per match.
     """
 
     def __init__(self, owner: CubeBase) -> None:
-        super().__init__(owner, Phase.PRE_MOVE, priority=5)
+        super().__init__(owner, Phase.TURN_END, priority=5)
 
-    def can_trigger(self, ctx: PreMoveContext) -> bool:
+    def can_trigger(self, ctx: TurnEndContext) -> bool:
         iuno = self.owner
         if ctx.active_cube is not iuno:
             return False
@@ -37,7 +32,7 @@ class _GatherAtMidpoint(Effect):
         iuno_idx = ranking.index(iuno)
         return 0 < iuno_idx < len(ranking) - 1  # someone ahead AND behind
 
-    def apply(self, ctx: PreMoveContext) -> None:
+    def apply(self, ctx: TurnEndContext) -> None:
         iuno = self.owner
         game = ctx.game
         target_pad = iuno.position
@@ -60,9 +55,10 @@ class _GatherAtMidpoint(Effect):
 
 class Iuno(CubeBase):
     """
-    Once per match: when Iuno first reaches or passes the midpoint with at least
-    one cube ahead, all non-Abbowser cubes are pulled to her pad and restacked by
-    ranking (last place → bottom, first place → top).  Held if no one is ahead.
+    Once per match, after passing the midpoint of the track, if there are
+    non-Abbowser cubes ranked both ahead and behind her, all of them are
+    teleported to her pad. Their stacking order reflects their rankings
+    prior to the teleport (last place → bottom, first place → top).
     """
 
     CUBE_TYPE: ClassVar[str] = "Iuno"
