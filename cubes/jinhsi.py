@@ -7,21 +7,21 @@ from engine.cube_base import CubeBase
 from engine.effect_system import Effect, Phase, TurnEndContext
 
 
-class _FloatToTop(Effect):
+class _TeleportToTop(Effect):
     """
-    At the end of any cube's turn, if that cube shares Jinhsi's pad and at least
-    one cube is above Jinhsi, there is a 40% chance she moves to the top of the
-    stack.  Can trigger multiple times per round.
+    Checks if the moved cubes stacked above Jinhsi. If so, rolls a 40%
+    chance to teleport her to the top of the stack.
     """
 
     def __init__(self, owner: CubeBase) -> None:
-        super().__init__(owner, Phase.TURN_END)
+        super().__init__(owner, Phase.TURN_END, priority=4)
 
     def can_trigger(self, ctx: TurnEndContext) -> bool:
         return (
             ctx.active_cube is not self.owner
-            and ctx.active_cube.position == self.owner.position
             and self.owner.above is not None
+            and ctx.active_cube.position == self.owner.position
+            and ctx.active_cube in self.owner.stack_above()
         )
 
     def apply(self, ctx: TurnEndContext) -> None:
@@ -38,4 +38,4 @@ class Jinhsi(CubeBase):
     CUBE_TYPE: ClassVar[str] = "Jinhsi"
 
     def _setup_effects(self) -> None:
-        self._register(_FloatToTop(self))
+        self._register(_TeleportToTop(self))
