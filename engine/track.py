@@ -12,14 +12,15 @@ class PadType(Enum):
 
 # Pad 0 = finish line; normal cubes start at pad 1.
 PAD_TYPES: dict[int, PadType] = {
-    3:  PadType.THRUSTER,
+    4:  PadType.THRUSTER,
     6:  PadType.SPATIAL_RIFT,
-    10: PadType.BLOCKER,
-    11: PadType.THRUSTER,
-    16: PadType.THRUSTER,
-    20: PadType.SPATIAL_RIFT,
-    23: PadType.THRUSTER,
-    28: PadType.BLOCKER,
+    10: PadType.THRUSTER,
+    14: PadType.SPATIAL_RIFT,
+    16: PadType.BLOCKER,
+    20: PadType.THRUSTER,
+    23: PadType.SPATIAL_RIFT,
+    26: PadType.BLOCKER,
+    30: PadType.BLOCKER,
 }
 
 
